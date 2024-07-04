@@ -14,6 +14,7 @@
   - [포인트 잔액 조회](#포인트-잔액-조회)
   - [포인트 충전](#포인트-충전)
   - [결제](#결제)
+- [ERD](#erd)
 
 ## 시퀀스 다이어그램
 
@@ -137,4 +138,110 @@ POST /api/concert/schedule/{schedule}/seat/{seatId}/pay ->> 스케줄: 요청 �
 스케줄 ->> 포인트: 포인트 차감 요청
 포인트 ->> 포인트 내역: 차감 내역 생성
 스케줄 -->> 사용자: 결제 정보 반환
+```
+
+## ERD
+
+| Table         | Verbose     | Description                |
+| ------------- | ----------- | -------------------------- |
+| queue         | 대기열      | 사용자의 대기열 토큰 정보  |
+| point         | 포인트      | 사용자의 포인트 정보       |
+| point_history | 포인트 내역 | 포인트 충전, 사용 내역     |
+| concert       | 공연        |                            |
+| schedule      | 공연 스케줄 | 공연 날짜 및 잔여좌석 정보 |
+| seat          | 공연 좌석   | 공연 스케줄의 좌석 정보    |
+| reservation   | 예약        | 사용자의 공연 예약 정보    |
+
+```mermaid
+erDiagram
+
+queue {
+  id int pk
+  created_at datetime
+  updated_at datetime
+
+  user_id int fk
+  token uuid
+  status enum
+}
+
+point {
+  id int pk
+  created_at datetime
+  updated_at datetime
+
+  user_id int fk
+  amount int
+}
+
+point_history {
+  id int pk
+  created_at datetime
+  updated_at datetime
+
+  user_id int fk
+  amount int
+  type enum
+}
+```
+
+```mermaid
+erDiagram
+
+concert {
+  id int pk
+  created_at datetime
+  updated_at datetime
+  deleted_at datetime
+
+  name string
+}
+concert ||--o{ schedule: one2many
+
+schedule {
+  id int pk
+  created_at datetime
+  updated_at datetime
+  deleted_at datetime
+
+  concnert_id int fk
+  date datetime
+  left_seat int
+}
+schedule ||--o{ seat: one2many
+
+seat {
+  id int pk
+  created_at datetime
+  updated_at datetime
+  deleted_at datetime
+
+  number int
+  price int
+  status enum
+}
+
+reservation {
+  id int pk
+  created_at datetime
+  updated_at datetime
+  deleted_at datetime
+  expired_at datetime
+
+  user_id int fk
+  status enum
+
+  concert_id int fk
+  concert_name string
+
+  schedule_id int fk
+  schedule_date datetime
+
+  seat_id int fk
+  seat_number int
+  seat_price int
+}
+concert ||--o{ reservation: one2many
+schedule ||--o{ reservation: one2many
+seat ||--o{ reservation: one2many
 ```
