@@ -15,6 +15,7 @@
   - [포인트 충전](#포인트-충전)
   - [결제](#결제)
 - [ERD](#erd)
+- [API 명세서](#api-명세서)
 
 ## 시퀀스 다이어그램
 
@@ -76,8 +77,8 @@ Get /api/concert/schedule/{scheduleId} ->> 스케줄: 토큰 & 스케줄 id 요�
 ```mermaid
 sequenceDiagram
 
-사용자 ->> POST /api/concert/schedule/{schedule}/seat/{seatId}/reservation: 예약 요청
-POST /api/concert/schedule/{schedule}/seat/{seatId}/reservation ->> 스케줄: 요청 전달
+사용자 ->> POST /api/concert/schedule/reservation: 예약 요청
+POST /api/concert/schedule/reservation ->> 스케줄: 요청 전달
 
 스케줄 ->> 대기열: 유효한 토큰인지 확인
 대기열 -->> 사용자: 유효하지 않은 토큰입니다.
@@ -88,6 +89,31 @@ POST /api/concert/schedule/{schedule}/seat/{seatId}/reservation ->> 스케줄: �
 스케줄 ->> 스케줄: 잔여좌석 감소
 스케줄 ->> 좌석: 좌석 예약 생성 처리 (expiredAt을 5분후로 지정)
 스케줄 -->> 사용자: 예약 정보 반환
+```
+
+### 결제
+
+```mermaid
+sequenceDiagram
+
+
+사용자 ->> PATCH /api/concert/schedule/reservation/{reservationId}: 결제 요청
+PATCH /api/concert/schedule/reservation/{reservationId} ->> 스케줄: 요청 전달
+
+스케줄 ->> 대기열: 유효한 토큰인지 확인
+대기열 -->> 사용자: 유효하지 않은 토큰입니다.
+
+스케줄 ->> 좌석: 유효한 좌석인지 확인
+좌석 -->> 사용자: 유효하지 않거나 이미 선택된 좌석입니다.
+
+스케줄 ->> 포인트: 포인트 사용 여부 확인
+포인트 -->> 사용자: 포인트가 부족합니다.
+
+스케줄 ->> 좌석: 좌석 결제 처리
+좌석 ->> 결제 내역: 결제 내역 생성
+스케줄 ->> 포인트: 포인트 차감 요청
+포인트 ->> 포인트 내역: 차감 내역 생성
+스케줄 -->> 사용자: 결제 정보 반환
 ```
 
 ### 포인트 잔액 조회
@@ -114,30 +140,6 @@ PATCH /api/point/{userId} ->> 포인트: 요청 전달
 포인트 ->> 포인트: 포인트 충전
 포인트 ->> 포인트 내역: 충전 내역 생성
 포인트 -->> 사용자: 충전 결과 반환
-```
-
-### 결제
-
-```mermaid
-sequenceDiagram
-
-사용자 ->> POST /api/concert/schedule/{schedule}/seat/{seatId}/pay: 결제 요청
-POST /api/concert/schedule/{schedule}/seat/{seatId}/pay ->> 스케줄: 요청 전달
-
-스케줄 ->> 대기열: 유효한 토큰인지 확인
-대기열 -->> 사용자: 유효하지 않은 토큰입니다.
-
-스케줄 ->> 좌석: 유효한 좌석인지 확인
-좌석 -->> 사용자: 유효하지 않거나 이미 선택된 좌석입니다.
-
-스케줄 ->> 포인트: 포인트 사용 여부 확인
-포인트 -->> 사용자: 포인트가 부족합니다.
-
-스케줄 ->> 좌석: 좌석 결제 처리
-좌석 ->> 결제 내역: 결제 내역 생성
-스케줄 ->> 포인트: 포인트 차감 요청
-포인트 ->> 포인트 내역: 차감 내역 생성
-스케줄 -->> 사용자: 결제 정보 반환
 ```
 
 ## ERD
@@ -245,3 +247,236 @@ concert ||--o{ reservation: one2many
 schedule ||--o{ reservation: one2many
 seat ||--o{ reservation: one2many
 ```
+
+## API 명세서
+
+**목차**
+
+- [대기열 토큰 발급 및 조회](#대기열-토큰-발급-및-조회)
+- [공연 날짜 조회](#공연-날짜-조회)
+- [공연 좌석 조회](#공연-좌석-조회)
+- [공연 예약](#공연-예약)
+- [공연 결제](#공연-결제)
+- [포인트 조회](#포인트-조회)
+- [포인트 충전](#포인트-충전-1)
+
+### 대기열 토큰 발급 및 조회
+
+현재 유저의 대기열 정보를 조회합니다.
+
+- `GET /api/queue/:userId`
+- **Path Parameter**
+  | Key | Description |
+  | ------ | ----------- |
+  | userId | 사용자 id |
+- **Response**
+  ```json
+  // 200 OK
+  {
+    "token": "d07edb0f-3ac1-45a3-8972-7d263958b59d", // uuid
+    "status": "wait", // wait, working
+    "remain": 1
+  }
+  ```
+
+### 공연 날짜 조회
+
+공연 목록을 조회합니다.
+
+- `GET /api/concert`
+- **Header**
+  | Key | Description |
+  | ------ | ----------- |
+  | Authorization | 대기열 토큰 |
+- **Response**
+
+  ```json
+  // 200 OK
+  [
+    {
+      "id": 1,
+      "name": "카리나의 왁자지껄",
+      "created_at": "2023-04-12T14:30:00+09:00",
+      "schedule": [
+        {
+          "id": 1,
+          "date": "2023-04-12T14:30:00+09:00",
+          "left_seat": 50,
+        }
+      ]
+    }
+  ]
+
+  // 401 Unauthorized
+  {
+    "message": "유효하지 않은 토큰입니다."
+  }
+
+  // 403 Forbidden
+  {
+    "message": "유효하지 않은 토큰입니다."
+  }
+  ```
+
+### 공연 좌석 조회
+
+해당 공연의 좌석 목록을 조회합니다.
+
+- `GET /api/concert/schedule/:scheduleId`
+- **Header**
+  | Key | Description |
+  | ------ | ----------- |
+  | Authorization | 대기열 토큰 |
+- **Path Parameter**
+  | Key | Description |
+  | ------ | ----------- |
+  | scheduleId | 공연 스케줄 id |
+- **Response**
+
+  ```json
+  // 200 OK
+  [
+    {
+      "id": 1,
+      "number": 1,
+      "price": 50000,
+      "status": "Available" // Available, Reserved, Purchased
+    }
+  ]
+
+  // 401 Unauthorized
+  {
+    "message": "유효하지 않은 토큰입니다."
+  }
+
+  // 403 Forbidden
+  {
+    "message": "유효하지 않은 토큰입니다."
+  }
+  ```
+
+### 공연 예약
+
+공연을 예약합니다.
+
+- `POST /api/concert/schedule/reservation`
+- **Header**
+  | Key | Description |
+  | ------ | ----------- |
+  | Authorization | 대기열 토큰 |
+- **Request Body**
+  | Key | Type | Description |
+  | ------ | ----------- |-|
+  | scheduleId | int | 공연 날짜 id |
+  | seatId | int | 좌석 id |
+  ```json
+  {
+    "scheduleId": 1,
+    "seatId": 1
+  }
+  ```
+- **Response**
+
+  ```json
+  // 201 Created
+  {
+    "id": 1
+  }
+
+  // 400 Bad Request
+  {
+    "message": "이미 선택된 좌석입니다."
+  }
+
+  // 401 Unauthorized
+  {
+    "message": "유효하지 않은 토큰입니다."
+  }
+
+  // 403 Forbidden
+  {
+    "message": "유효하지 않은 토큰입니다."
+  }
+  ```
+
+### 공연 결제
+
+사용자가 예약한 공연을 결제합니다.
+
+- `PATCH /api/concert/schedule/reservation/:reservationId`
+- **Header**
+  | Key | Description |
+  | ------ | ----------- |
+  | Authorization | 대기열 토큰 |
+- **Path Parameter**
+  | Key | Description |
+  | ------ | ----------- |
+  | reservationId | 예약 id |
+- **Response**
+
+  ```json
+  // 200 Ok
+  {
+    "id": 1
+  }
+
+  // 400 Bad Request
+  {
+    "message": "포인트가 부족합니다."
+  }
+
+  {
+    "message": "유효하지 않은 접근입니다."
+  }
+
+  // 401 Unauthorized
+  {
+    "message": "유효하지 않은 토큰입니다."
+  }
+
+  // 403 Forbidden
+  {
+    "message": "유효하지 않은 토큰입니다."
+  }
+  ```
+
+### 포인트 조회
+
+현재 유저의 포인트 정보를 조회합니다.
+
+- `GET /api/point/:userId`
+- **Path Parameter**
+  | Key | Description |
+  | ------ | ----------- |
+  | userId | 사용자 id |
+- **Response**
+  ```json
+  // 200 Ok
+  {
+    "amount": 100000
+  }
+  ```
+
+### 포인트 충전
+
+현재 유저의 포인트를 충전합니다.
+
+- `PATCH /api/point/:userId`
+- **Path Parameter**
+  | Key | Description |
+  | ------ | ----------- |
+  | userId | 사용자 id |
+- **Request Body**
+  | Key | Type | Description |
+  | ------ | ----------- |-|
+  | amount | int | 충전 금액 |
+  ```json
+  {
+    "amount": 50000
+  }
+  ```
+- **Response**
+
+  ```json
+  // 200 Ok
+  ```
