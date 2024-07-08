@@ -7,13 +7,20 @@
 - [Milestone](https://github.com/Ksanbal/Concert-Reservation-API/milestones)
 - [Projects](https://github.com/users/Ksanbal/projects/8/views/1)
 - [시퀀스 다이어그램](#시퀀스-다이어그램)
-  - [유저 토큰 발급](#유저-토큰-발급)
-  - [예약가능 날짜 조회](#예약가능날짜-조회)
-  - [예약가능 날짜 조회](#예약가능-날짜-조회)
-  - [예약가능 자리 조회](#예약가능-자리-조회)
-  - [포인트 잔액 조회](#포인트-잔액-조회)
-  - [포인트 충전](#포인트-충전)
+  - [대기열](#대기열)
+    - [대기열 토큰 발급](#대기열-토큰-발급)
+    - [대기열 토큰 유효성 체크](#대기열-토큰-유효성-체크)
+    - [대기열 토큰 유효기간 연장](#대기열-토큰-유효기간-연장)
+    - [대기열 토큰 상태 및 만료시간 업데이트 스케줄](#대기열-토큰-상태-및-만료시간-업데이트-스케줄)
+  - [공연](#공연)
+    - [예약가능 날짜 조회](#예약가능-날짜-조회)
+    - [예약가능 자리 조회](#예약가능-자리-조회)
+    - [공연 예약 요청](#공연-예약-요청)
+    - [좌석 예약 반환 스케줄](#좌석-예약-반환-스케줄)
   - [결제](#결제)
+  - [포인트](#포인트)
+    - [포인트 잔액 조회](#포인트-잔액-조회)
+    - [포인트 충전](#포인트-충전)
 - [ERD](#erd)
 - [API 명세서](#api-명세서)
 
@@ -87,33 +94,15 @@ opt 토큰이 존재하면
 end
 ```
 
-#### 대기열 토큰 삭제
-
-```mermaid
-sequenceDiagram
-
-사용자 ->> DELETE /api/queue/token: 토큰 삭제
-DELETE /api/queue/token ->> 대기열: 토큰 삭제
-
-대기열 ->> 대기열: 토큰 정보 조회
-opt 토큰이 존재하지 않으면
-  대기열 -->> 사용자: 토큰이 존재하지 않습니다.
-end
-
-대기열 ->> 대기열: 토큰 hard delete 처리
-
-대기열 -->> 사용자: 토큰이 삭제되었습니다.
-```
-
 #### 대기열 토큰 상태 및 만료시간 업데이트 스케줄
 
 ```mermaid
 sequenceDiagram
 
-loop 10초마다 반복
+loop 1분마다 반복
   대기열 ->> 대기열: 상태가 working인 토큰의 개수를 확인
   opt working 상태인 토큰의 개수가 허용개수 보다 작으면
-    대기열 ->> 대기열: 전체 허용개수 - 현재 활성 토큰 수 만큼 상태변경 및 만료시간 부여
+    대기열 ->> 대기열: 전체 허용개수 - 현재 활성 토큰 수 만큼 상태변경 및 만료시간 20분 부여
   end
 end
 ```
@@ -131,7 +120,7 @@ Get /api/concerts ->> 공연: 토큰 & 요청 전달
 공연 ->> 대기열: 유효한 토큰인지 확인
 대기열 -->> 사용자: 유효하지 않은 토큰입니다.
 
-공연 ->> 공연: 공연 정보 조회
+공연 ->> 공연: 예약 오픈일과 종료일 사이에 있는 공연 정보 조회
 공연 -->> 사용자: 공연 정보(이름, 잔여좌석) 반환
 ```
 
@@ -150,7 +139,7 @@ Get /api/concerts/schedules/{scheduleId}/seats ->> 공연: 토큰 & 공연 스�
 공연 -->> 사용자: 좌석 목록 반환
 ```
 
-#### 좌석 예약 요청
+#### 공연 예약 요청
 
 ```mermaid
 sequenceDiagram
@@ -181,7 +170,7 @@ deactivate 공연
 ```mermaid
 sequenceDiagram
 
-loop 10초마다 반복
+loop 1분마다 반복
   예약 ->> 예약: 예약시간이 만료된 예약 목록 조회
   예약 ->> 공연: 해당 예약의 좌석 상태를 예약가능으로 변경 요청
 end
@@ -217,6 +206,7 @@ deactivate 유저
 결제 ->> 예약: 예약 상태를 결제로 변경 요청
 
 결제 ->> 공연: 예약했던 공연 스케줄의 좌석의 상태를 결제로 변경 요청
+결제 ->> 대기열: 토큰 삭제 요청
 결제 -->> 사용자: 결제 정보 반환
 ```
 
@@ -252,46 +242,49 @@ deactivate 유저
 
 ## ERD
 
-| Table         | Verbose     | Description                |
-| ------------- | ----------- | -------------------------- |
-| queue         | 대기열      | 사용자의 대기열 토큰 정보  |
-| point         | 포인트      | 사용자의 포인트 정보       |
-| point_history | 포인트 내역 | 포인트 충전, 사용 내역     |
-| concert       | 공연        |                            |
-| schedule      | 공연 스케줄 | 공연 날짜 및 잔여좌석 정보 |
-| seat          | 공연 좌석   | 공연 스케줄의 좌석 정보    |
-| reservation   | 예약        | 사용자의 공연 예약 정보    |
+| Table             | Verbose         | Description                         |
+| ----------------- | --------------- | ----------------------------------- |
+| user              | 사용자          | 사용자                              |
+| queue             | 대기열          | 사용자의 대기열 토큰 정보           |
+| point             | 포인트          | 사용자의 포인트 정보                |
+| point_history     | 포인트 내역     | 포인트 충전, 사용 내역              |
+| concert           | 공연            |                                     |
+| concert_schedule  | 공연 스케줄     | 공연 날짜 및 잔여좌석 정보          |
+| concert_seat      | 공연 좌석       | 공연 스케줄의 좌석 정보             |
+| reservation       | 예약            | 사용자의 공연 예약 정보             |
+| payment           | 결제정보        | 사용자의 공연 예약 정보             |
+| concert_meta_data | 공연 메타데이터 | 공연 예약시 생성되는 공연 meta data |
 
 ```mermaid
 erDiagram
 
-queue {
+user {
   id int pk
-  created_at datetime
-  updated_at datetime
-
-  user_id int fk
-  token uuid
-  status enum
+  name string
 }
 
 point {
   id int pk
-  created_at datetime
   updated_at datetime
-
-  user_id int fk
+  user_id int fk "1:1"
   amount int
 }
 
 point_history {
   id int pk
   created_at datetime
-  updated_at datetime
 
-  user_id int fk
+  user_id int fk "N:1"
   amount int
   type enum
+}
+
+queue {
+  id uuid pk
+  expired_at datetime
+
+  user_id int fk "N:1"
+  status enum "wait, working, expired"
 }
 ```
 
@@ -300,27 +293,23 @@ erDiagram
 
 concert {
   id int pk
-  created_at datetime
-  updated_at datetime
-  deleted_at datetime
 
   name string
 }
-concert ||--o{ schedule: one2many
+concert ||--o{ concert_schedule: one2many
 
-schedule {
+concert_schedule {
   id int pk
-  created_at datetime
-  updated_at datetime
-  deleted_at datetime
 
-  concnert_id int fk
   date datetime
+  ticket_open_at datetime
+  ticket_close_at datetime
+
   left_seat int
 }
-schedule ||--o{ seat: one2many
+concert_schedule ||--o{ concert_seat: one2many
 
-seat {
+concert_seat {
   id int pk
   created_at datetime
   updated_at datetime
@@ -328,32 +317,48 @@ seat {
 
   number int
   price int
-  status enum
+  status enum "able, reserved, paied"
 }
+
+concert_meta_data {
+  id int pk
+
+  concert_id int fk
+  concert_name string
+
+  concert_schedule_id int fk
+  concert_schedule_date datetime
+
+  concert_seat_id int fk
+  concert_seat_number int
+  concert_seat_price int
+}
+concert ||--o{ concert_meta_data: one2many
+concert_schedule ||--o{ concert_meta_data: one2many
+concert_seat ||--o{ concert_meta_data: one2many
 
 reservation {
   id int pk
   created_at datetime
   updated_at datetime
-  deleted_at datetime
   expired_at datetime
 
   user_id int fk
-  status enum
+  status enum "reserved, expired, paied"
 
-  concert_id int fk
-  concert_name string
-
-  schedule_id int fk
-  schedule_date datetime
-
-  seat_id int fk
-  seat_number int
-  seat_price int
+  concert_meta_data_id int fk
 }
-concert ||--o{ reservation: one2many
-schedule ||--o{ reservation: one2many
-seat ||--o{ reservation: one2many
+reservation ||--|| concert_meta_data: one2one
+
+payment {
+  id int pk
+  created_at datetime
+
+  reservation_id int fk "1:1"
+
+  user_id int fk
+}
+reservation ||--|| payment: one2one
 ```
 
 ## API 명세서
