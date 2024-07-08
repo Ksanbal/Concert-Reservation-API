@@ -365,24 +365,55 @@ reservation ||--|| payment: one2one
 
 **목차**
 
-- [대기열 토큰 발급 및 조회](#대기열-토큰-발급-및-조회)
-- [공연 날짜 조회](#공연-날짜-조회)
-- [공연 좌석 조회](#공연-좌석-조회)
-- [공연 예약](#공연-예약)
-- [공연 결제](#공연-결제)
-- [포인트 조회](#포인트-조회)
-- [포인트 충전](#포인트-충전-1)
+- 대기열
+  - [대기열 토큰 발급](#대기열-토큰-발급-api)
+  - [대기열 토큰 유효성 체크](#대기열-토큰-유효성-체크-api)
+  - [대기열 토큰 유효기간 연장](#대기열-토큰-유효기간-연장-api)
+- 공연
+  - [예약 가능한 공연 날짜 조회](#예약-가능한-공연-날짜-조회-api)
+  - [공연 좌석 조회](#공연-좌석-조회-api)
+  - [공연 예약](#공연-예약-api)
+- [공연 결제](#공연-결제-api)
+- 포인트
+  - [포인트 조회](#포인트-조회-api)
+  - [포인트 충전](#포인트-충전-api)
 
-### 대기열 토큰 발급 및 조회
+### 대기열 토큰 발급 API
+
+현재 유저에게 대기열 토큰을 발급합니다.
+
+- `POST /api/queue/token`
+- **Body**
+  |Key|type|Description|
+  |---|---|---|
+  |userId|int|사용자 id|
+- **Response**
+
+  ```json
+  // 201 Created
+  {
+    "token": "d07edb0f-3ac1-45a3-8972-7d263958b59d", // uuid
+    "status": "wait", // wait, working
+    "remain": 1
+  }
+
+  // 401 Unauthorized
+  {
+    "message": "유효하지 않은 사용자입니다."
+  }
+  ```
+
+### 대기열 토큰 유효성 체크 API
 
 현재 유저의 대기열 정보를 조회합니다.
 
-- `GET /api/queue/:userId`
-- **Path Parameter**
+- `GET /api/queue/token/validate`
+- **Header**
   | Key | Description |
   | ------ | ----------- |
-  | userId | 사용자 id |
+  | Authorization | 대기열 토큰 |
 - **Response**
+
   ```json
   // 200 OK
   {
@@ -390,13 +421,53 @@ reservation ||--|| payment: one2one
     "status": "wait", // wait, working
     "remain": 1
   }
+
+  // 404 Not Found
+  {
+    "message": "토큰이 존재하지 않습니다."
+  }
+
+  // 401 Unauthorized
+  {
+    "message": "이미 만료된 토큰입니다."
+  }
   ```
 
-### 공연 날짜 조회
+### 대기열 토큰 유효기간 연장 API
 
-공연 목록을 조회합니다.
+현재 유저의 대기열 토큰의 유효기간을 연장합니다.
 
-- `GET /api/concert`
+- `PUT /api/queue/token`
+- **Header**
+  | Key | Description |
+  | ------ | ----------- |
+  | Authorization | 대기열 토큰 |
+- **Response**
+
+  ```json
+  // 200 OK
+  {
+    "token": "d07edb0f-3ac1-45a3-8972-7d263958b59d", // uuid
+    "status": "wait", // wait, working
+    "remain": 1
+  }
+
+  // 404 Not Found
+  {
+    "message": "토큰이 존재하지 않습니다."
+  }
+
+  // 401 Unauthorized
+  {
+    "message": "이미 만료된 토큰입니다."
+  }
+  ```
+
+### 예약 가능한 공연 날짜 조회 API
+
+예약 가능한 공연 목록을 조회합니다. 티켓 오픈날짜와 종료날짜로 검증합니다.
+
+- `GET /api/concerts`
 - **Header**
   | Key | Description |
   | ------ | ----------- |
@@ -409,12 +480,13 @@ reservation ||--|| payment: one2one
     {
       "id": 1,
       "name": "카리나의 왁자지껄",
-      "created_at": "2023-04-12T14:30:00+09:00",
       "schedule": [
         {
           "id": 1,
           "date": "2023-04-12T14:30:00+09:00",
-          "left_seat": 50,
+          "ticketOpenAt": "2023-04-12T14:30:00+09:00",
+          "ticketCloseAt": "2023-04-12T14:30:00+09:00",
+          "leftSeat": 50,
         }
       ]
     }
@@ -431,11 +503,11 @@ reservation ||--|| payment: one2one
   }
   ```
 
-### 공연 좌석 조회
+### 공연 좌석 조회 API
 
 해당 공연의 좌석 목록을 조회합니다.
 
-- `GET /api/concert/schedule/:scheduleId`
+- `GET /api/concerts/schedules/:scheduleId/seats`
 - **Header**
   | Key | Description |
   | ------ | ----------- |
@@ -453,7 +525,7 @@ reservation ||--|| payment: one2one
       "id": 1,
       "number": 1,
       "price": 50000,
-      "status": "Available" // Available, Reserved, Purchased
+      "status": "Able" // Able, Reserved, Paied
     }
   ]
 
@@ -468,11 +540,11 @@ reservation ||--|| payment: one2one
   }
   ```
 
-### 공연 예약
+### 공연 예약 API
 
 공연을 예약합니다.
 
-- `POST /api/concert/schedule/reservation`
+- `POST /api/reservations`
 - **Header**
   | Key | Description |
   | ------ | ----------- |
@@ -493,7 +565,17 @@ reservation ||--|| payment: one2one
   ```json
   // 201 Created
   {
-    "id": 1
+    "id": 1,
+    "createdAt": "2023-04-12T14:30:00+09:00",
+    "updatedAt": "2023-04-12T14:30:00+09:00",
+    "expiredAt": "2023-04-12T14:30:00+09:00",
+    "status": "reserved", // reserved, expired, paied
+    "concertMetaData": {
+      "concertName": "카리나의 왁자지껄",
+      "concertScheduleData": "2023-04-12T14:30:00+09:00",
+      "concertSeatNumber": 1,
+      "concertSeatPrice": 50000,
+    }
   }
 
   // 400 Bad Request
@@ -512,25 +594,39 @@ reservation ||--|| payment: one2one
   }
   ```
 
-### 공연 결제
+### 공연 결제 API
 
 사용자가 예약한 공연을 결제합니다.
 
-- `PATCH /api/concert/schedule/reservation/:reservationId`
+- `POST /api/payments`
 - **Header**
   | Key | Description |
   | ------ | ----------- |
   | Authorization | 대기열 토큰 |
-- **Path Parameter**
-  | Key | Description |
-  | ------ | ----------- |
-  | reservationId | 예약 id |
+- **Body**
+  | Key |Type| Description |
+  | ------ | - | ----------- |
+  |reservationId|int|예약 id|
 - **Response**
 
   ```json
-  // 200 Ok
+  // 201 Created
   {
-    "id": 1
+    "id": 1,
+    "createdAt": "2023-04-12T14:30:00+09:00",
+    "reservation": {
+      "id": 1,
+      "createdAt": "2023-04-12T14:30:00+09:00",
+      "updatedAt": "2023-04-12T14:30:00+09:00",
+      "expiredAt": "2023-04-12T14:30:00+09:00",
+      "status": "reserved", // reserved, expired, paied
+      "concertMetaData": {
+        "concertName": "카리나의 왁자지껄",
+        "concertScheduleData": "2023-04-12T14:30:00+09:00",
+        "concertSeatNumber": 1,
+        "concertSeatPrice": 50000,
+      }
+    },
   }
 
   // 400 Bad Request
@@ -553,11 +649,11 @@ reservation ||--|| payment: one2one
   }
   ```
 
-### 포인트 조회
+### 포인트 조회 API
 
 현재 유저의 포인트 정보를 조회합니다.
 
-- `GET /api/point/:userId`
+- `GET /api/users/:userId/point`
 - **Path Parameter**
   | Key | Description |
   | ------ | ----------- |
@@ -570,11 +666,11 @@ reservation ||--|| payment: one2one
   }
   ```
 
-### 포인트 충전
+### 포인트 충전 API
 
 현재 유저의 포인트를 충전합니다.
 
-- `PATCH /api/point/:userId`
+- `PATCH /api/users/:userId/point/charge`
 - **Path Parameter**
   | Key | Description |
   | ------ | ----------- |
@@ -592,4 +688,7 @@ reservation ||--|| payment: one2one
 
   ```json
   // 200 Ok
+  {
+    "amount": 100000
+  }
   ```
