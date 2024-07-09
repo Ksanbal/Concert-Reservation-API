@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { QueueTokenResDto } from 'src/presentation/queue/dto/response/queue.token.res.dto';
-import { QueueController } from 'src/presentation/queue/queue.controller';
+import { QueueTokenResDto } from 'src/1-presentation/queue/dto/response/queue.token.res.dto';
+import { QueueController } from 'src/1-presentation/queue/queue.controller';
 
 describe('QueueController', () => {
   let controller: QueueController;

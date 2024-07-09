@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConcertsController } from 'src/presentation/concerts/concerts.controller';
-import { ConcertsResDto } from 'src/presentation/concerts/dto/response/concerts.res.dto';
-import { ConcertsSeatsResDto } from 'src/presentation/concerts/dto/response/concerts.seats.res.dto';
+import { ConcertsController } from 'src/1-presentation/concerts/concerts.controller';
+import { ConcertsResDto } from 'src/1-presentation/concerts/dto/response/concerts.res.dto';
+import { ConcertsSeatsResDto } from 'src/1-presentation/concerts/dto/response/concerts.seats.res.dto';
 
 describe('ConcertsController', () => {
   let controller: ConcertsController;

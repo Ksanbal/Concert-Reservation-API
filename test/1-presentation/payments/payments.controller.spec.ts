@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PaymentsReservationStatusEnum } from 'src/presentation/payments/dto/enum/payments.reservation-status.enum';
-import { PaymentsPayResDto } from 'src/presentation/payments/dto/response/payments.pay.res.dto';
-import { PaymentsController } from 'src/presentation/payments/payments.controller';
+import { PaymentsReservationStatusEnum } from 'src/1-presentation/payments/dto/enum/payments.reservation-status.enum';
+import { PaymentsPayResDto } from 'src/1-presentation/payments/dto/response/payments.pay.res.dto';
+import { PaymentsController } from 'src/1-presentation/payments/payments.controller';
 
 describe('PaymentsController', () => {
   let controller: PaymentsController;

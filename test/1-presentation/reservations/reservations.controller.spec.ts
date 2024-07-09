@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ReservationsResDto } from 'src/presentation/reservations/dto/response/reservations.res.dto';
-import { ReservationsController } from 'src/presentation/reservations/reservations.controller';
+import { ReservationsResDto } from 'src/1-presentation/reservations/dto/response/reservations.res.dto';
+import { ReservationsController } from 'src/1-presentation/reservations/reservations.controller';
 
 describe('ReservationsController', () => {
   let controller: ReservationsController;

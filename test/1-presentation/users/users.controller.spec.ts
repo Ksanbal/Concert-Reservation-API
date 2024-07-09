@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UsersPointResDto } from 'src/presentation/users/dto/response/users.point.res.dto';
-import { UsersController } from 'src/presentation/users/users.controller';
+import { UsersPointResDto } from 'src/1-presentation/users/dto/response/users.point.res.dto';
+import { UsersController } from 'src/1-presentation/users/users.controller';
 
 describe('UsersController', () => {
   let controller: UsersController;
