@@ -135,7 +135,7 @@ Get /api/concerts/schedules/{scheduleId}/seats ->> 공연: 토큰 & 공연 스�
 공연 ->> 대기열: 유효한 토큰인지 확인
 대기열 -->> 사용자: 유효하지 않은 토큰입니다.
 
-공연 ->> 공연: 해당 공연 스케줄의 좌석 목록 조회
+공연 ->> 공연: 예약 가능한 해당 공연 스케줄의 좌석 목록 조회
 공연 -->> 사용자: 좌석 목록 반환
 ```
 
@@ -311,13 +311,10 @@ concert_schedule ||--o{ concert_seat: one2many
 
 concert_seat {
   id int pk
-  created_at datetime
-  updated_at datetime
-  deleted_at datetime
-
+  concert_schedule int fk
   number int
   price int
-  status enum "able, reserved, paied"
+  status enum "closed, able, reserved, soldout"
 }
 
 concert_meta_data {
@@ -525,7 +522,7 @@ reservation ||--|| payment: one2one
       "id": 1,
       "number": 1,
       "price": 50000,
-      "status": "Able" // Able, Reserved, Paied
+      "status": "Able" // Able, Reserved, SoldOut
     }
   ]
 
@@ -622,7 +619,7 @@ reservation ||--|| payment: one2one
       "status": "reserved", // reserved, expired, paied
       "concertMetaData": {
         "concertName": "카리나의 왁자지껄",
-        "concertScheduleData": "2023-04-12T14:30:00+09:00",
+        "concertScheduleDate": "2023-04-12T14:30:00+09:00",
         "concertSeatNumber": 1,
         "concertSeatPrice": 50000,
       }
