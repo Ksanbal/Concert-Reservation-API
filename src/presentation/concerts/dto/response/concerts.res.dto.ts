@@ -1,3 +1,4 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsArray,
@@ -8,29 +9,37 @@ import {
 } from 'class-validator';
 
 class Schedule {
+  @ApiProperty()
   @IsNumber()
   id: number;
 
+  @ApiProperty()
   @IsDate()
   date: Date;
 
+  @ApiProperty()
   @IsDate()
   ticketOpenAt: Date;
 
+  @ApiProperty()
   @IsDate()
   ticketCloseAt: Date;
 
+  @ApiProperty()
   @IsNumber()
   leftSeat: number;
 }
 
 export class ConcertsResDto {
+  @ApiProperty()
   @IsNumber()
   id: number;
 
+  @ApiProperty()
   @IsString()
   name: string;
 
+  @ApiProperty({ type: [Schedule] })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => Schedule)

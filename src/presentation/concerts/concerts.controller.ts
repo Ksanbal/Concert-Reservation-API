@@ -2,11 +2,35 @@ import { Controller, Get, Headers, Param, ParseIntPipe } from '@nestjs/common';
 import { ConcertsResDto } from './dto/response/concerts.res.dto';
 import { ConcertsSeatsResDto } from './dto/response/concerts.seats.res.dto';
 import { ConcertSeatStatusEnum } from './dto/enum/concert.seat-status.enum';
+import {
+  ApiForbiddenResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 
+@ApiTags('Concerts')
 @Controller('concerts')
 export class ConcertsController {
+  @ApiOperation({
+    summary: '예약 가능한 공연 날짜 조회',
+  })
+  @ApiOkResponse({ type: ConcertsResDto, isArray: true })
+  @ApiUnauthorizedResponse({
+    example: {
+      message: '유효하지 않은 토큰입니다.',
+    },
+  })
+  @ApiForbiddenResponse({
+    example: {
+      message: '유효하지 않은 토큰입니다.',
+    },
+  })
   @Get()
-  async list(@Headers('Authorization') token: string) {
+  async list(
+    @Headers('Authorization') token: string,
+  ): Promise<ConcertsResDto[]> {
     const mockData = [
       {
         id: 1,
@@ -46,11 +70,25 @@ export class ConcertsController {
     return mockData.map((e) => new ConcertsResDto(e));
   }
 
+  @ApiOperation({
+    summary: '공연 좌석 조회',
+  })
+  @ApiOkResponse({ type: ConcertsSeatsResDto, isArray: true })
+  @ApiUnauthorizedResponse({
+    example: {
+      message: '유효하지 않은 토큰입니다.',
+    },
+  })
+  @ApiForbiddenResponse({
+    example: {
+      message: '유효하지 않은 토큰입니다.',
+    },
+  })
   @Get('schedules/:scheduleId/seats')
   async seats(
     @Headers('Authorization') token: string,
     @Param('scheduleId', ParseIntPipe) scheduleId: number,
-  ) {
+  ): Promise<ConcertsSeatsResDto[]> {
     const mockData = [
       {
         id: 1,
