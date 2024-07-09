@@ -280,9 +280,10 @@ point_history {
 }
 
 queue {
-  id uuid pk
+  id int pk
   expired_at datetime
 
+  token uuid
   user_id int fk "N:1"
   status enum "wait, working, expired"
 }
@@ -341,7 +342,7 @@ reservation {
   expired_at datetime
 
   user_id int fk
-  status enum "reserved, expired, paied"
+  status enum "reserved, expired, paid"
 
   concert_meta_data_id int fk
 }
@@ -566,7 +567,7 @@ reservation ||--|| payment: one2one
     "createdAt": "2023-04-12T14:30:00+09:00",
     "updatedAt": "2023-04-12T14:30:00+09:00",
     "expiredAt": "2023-04-12T14:30:00+09:00",
-    "status": "reserved", // reserved, expired, paied
+    "status": "reserved", // reserved, expired, paid
     "concertMetaData": {
       "concertName": "카리나의 왁자지껄",
       "concertScheduleData": "2023-04-12T14:30:00+09:00",
@@ -616,7 +617,7 @@ reservation ||--|| payment: one2one
       "createdAt": "2023-04-12T14:30:00+09:00",
       "updatedAt": "2023-04-12T14:30:00+09:00",
       "expiredAt": "2023-04-12T14:30:00+09:00",
-      "status": "reserved", // reserved, expired, paied
+      "status": "reserved", // reserved, expired, paid
       "concertMetaData": {
         "concertName": "카리나의 왁자지껄",
         "concertScheduleDate": "2023-04-12T14:30:00+09:00",
