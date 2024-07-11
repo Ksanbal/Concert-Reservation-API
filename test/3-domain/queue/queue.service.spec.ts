@@ -18,7 +18,7 @@ describe('QueueService', () => {
       .overrideProvider(UsersRepository)
       .useValue(UsersMockRepository)
       .overrideProvider(QueueRepository)
-      .useValue(QueueMockRepository)
+      .useClass(QueueMockRepository)
       .compile();
 
     service = module.get<QueueService>(QueueService);
@@ -129,6 +129,41 @@ describe('QueueService', () => {
       await service.processExpiredQueue();
 
       // then
+    });
+  });
+
+  describe('상태가 활성화된 토큰 조회', () => {
+    it('존재하지 않는 토큰인 경우', async () => {
+      // given
+      const token = 'unkown-token';
+
+      // when
+      const result = service.getWorking({ token });
+
+      // then
+      await expect(result).rejects.toThrow(NotFoundException);
+    });
+
+    it('만료된 토큰인 경우', async () => {
+      // given
+      const token = 'expired-token';
+
+      // when
+      const result = service.getWorking({ token });
+
+      // then
+      await expect(result).rejects.toThrow(ForbiddenException);
+    });
+
+    it('대기중인 토큰인 경우', async () => {
+      // given
+      const token = 'waiting-token';
+
+      // when
+      const result = service.getWorking({ token });
+
+      // then
+      await expect(result).rejects.toThrow(ForbiddenException);
     });
   });
 });

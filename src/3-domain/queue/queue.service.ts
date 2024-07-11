@@ -96,4 +96,26 @@ export class QueueService {
 
     await this.queueRepository.bulkUpdate(expiredQueues);
   }
+
+  async getWorking(args: QueueServiceGetProps): Promise<QueueModel> {
+    const queue = await this.queueRepository.findByToken(args.token);
+
+    if (!queue) {
+      throw new NotFoundException('토큰이 존재하지 않습니다.');
+    }
+
+    // 만료시간이 지났다면
+    if (
+      queue.status == QueueStatusEnum.EXPIRED ||
+      dayjs(queue.expiredAt).isBefore(dayjs())
+    ) {
+      throw new ForbiddenException('이미 만료된 토큰입니다.');
+    }
+
+    if (queue.status == QueueStatusEnum.WAIT) {
+      throw new ForbiddenException('대기 중인 토큰입니다.');
+    }
+
+    return queue;
+  }
 }

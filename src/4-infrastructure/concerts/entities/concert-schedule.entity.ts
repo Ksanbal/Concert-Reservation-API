@@ -6,6 +6,9 @@ export class ConcertScheduleEntity {
   id: number;
 
   @Column()
+  concertId: number;
+
+  @Column()
   date: Date;
 
   @Column()
