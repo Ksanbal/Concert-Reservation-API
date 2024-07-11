@@ -8,6 +8,7 @@ import { ConcertsModule } from './1-presentation/concerts/concerts.module';
 import { ReservationsModule } from './1-presentation/reservations/reservations.module';
 import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './libs/database/database.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { DatabaseModule } from './libs/database/database.module';
       isGlobal: true,
     }),
     DatabaseModule,
+    ScheduleModule.forRoot(),
     QueueModule,
     UsersModule,
     PaymentsModule,
