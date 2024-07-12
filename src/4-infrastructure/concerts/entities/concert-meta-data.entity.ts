@@ -21,5 +21,8 @@ export class ConcertMetaDataEntity {
   concertSeatId: number;
 
   @Column()
+  concertSeatNumber: number;
+
+  @Column()
   concertSeatPrice: number;
 }

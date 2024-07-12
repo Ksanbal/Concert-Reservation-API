@@ -1,3 +1,4 @@
+import { ConcertMetaDataEntity } from 'src/4-infrastructure/concerts/entities/concert-meta-data.entity';
 import { ConcertScheduleEntity } from 'src/4-infrastructure/concerts/entities/concert-schedule.entity';
 import {
   ConcertSeatEntity,
@@ -74,6 +75,36 @@ export class ConcertSeatsModel {
       entity.number,
       entity.price,
       entity.status,
+    );
+  }
+}
+
+export class ConcertMetaDataModel {
+  constructor(
+    public id: number,
+    public concertId: number,
+    public concertName: string,
+    public concertScheduleId: number,
+    public concertScheduleDate: Date,
+    public concertSeatId: number,
+    public concertSeatNumber: number,
+    public concertSeatPrice: number,
+  ) {}
+
+  static fromEntity(entity: ConcertMetaDataEntity | null) {
+    if (entity == null) {
+      return null;
+    }
+
+    return new ConcertMetaDataModel(
+      entity.id,
+      entity.concertId,
+      entity.concertName,
+      entity.concertScheduleId,
+      entity.concertScheduleDate,
+      entity.concertSeatId,
+      entity.concertSeatNumber,
+      entity.concertSeatPrice,
     );
   }
 }
