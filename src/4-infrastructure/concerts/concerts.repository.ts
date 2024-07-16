@@ -9,7 +9,10 @@ import {
   Repository,
 } from 'typeorm';
 import { ConcertScheduleEntity } from './entities/concert-schedule.entity';
-import { ConcertSeatEntity } from './entities/concert-seat.entity';
+import {
+  ConcertSeatEntity,
+  ConcertSeatStatusEnum,
+} from './entities/concert-seat.entity';
 import {
   ConcertMetaDataModel,
   ConcertScheduleModel,
@@ -126,5 +129,28 @@ export class ConcertsRepository {
     await this.concertScheduleRepository.update(scheduleId, {
       leftSeat,
     });
+  }
+
+  // status가 reserved인 seatId의 상태를 open으로 변경
+  async updateReservedSeatToOpen(seatId: number): Promise<boolean> {
+    const { affected } = await this.concertSeatRepository.update(
+      {
+        id: seatId,
+        status: ConcertSeatStatusEnum.RESERVED,
+      },
+      {
+        status: ConcertSeatStatusEnum.OPEN,
+      },
+    );
+    return 0 < affected;
+  }
+
+  // 콘서트 메타 데이터를 삭제
+  async deleteConcertMetaData(concertMetaDataId: number) {
+    const { affected } = await this.concertMeataDataRepository.delete({
+      id: concertMetaDataId,
+    });
+
+    return 0 < affected;
   }
 }

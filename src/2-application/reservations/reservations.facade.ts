@@ -3,7 +3,6 @@ import { ConcertsService } from 'src/3-domain/concerts/concerts.service';
 import { QueueService } from 'src/3-domain/queue/queue.service';
 import { ReservationsService } from 'src/3-domain/reservations/reservations.service';
 import { ReservationsFacadeCreateProps } from './reservations.facade-props';
-import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Injectable()
 export class ReservationsFacade {
@@ -41,11 +40,27 @@ export class ReservationsFacade {
   /**
    * 공연 좌석 예약 반환 스케줄
    */
-  @Cron(CronExpression.EVERY_MINUTE)
   async rollbackUnpaidReservations() {
     // 미결제 예약 정보 조회
-    // 좌석 예약 반환 처리
-    // 예약 정보 삭제
-    // 공연 meta data 삭제
+    const reservations = await this.reservationsService.getUnpaidReservations();
+
+    for (const reservation of reservations) {
+      // 좌석 예약 반환 처리
+      try {
+        await this.concertsService.rollbackSeat(
+          reservation.concertMetaData.concertSeatId,
+        );
+
+        // 예약 정보 삭제
+        await this.reservationsService.delete(reservation.id);
+
+        // 공연 meta data 삭제
+        await this.concertsService.deleteMetaData(
+          reservation.concertMetaData.id,
+        );
+      } catch (error) {
+        console.error(error);
+      }
+    }
   }
 }

@@ -19,4 +19,12 @@ export class ReservationsService {
       status: ReservationStatusEnum.RESERVED,
     });
   }
+
+  async getUnpaidReservations(): Promise<ReservationsModel[]> {
+    return this.reservationsRepository.findAllUnpaid();
+  }
+
+  async delete(id: number) {
+    return this.reservationsRepository.delete(id);
+  }
 }

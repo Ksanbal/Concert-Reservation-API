@@ -88,4 +88,23 @@ export class ConcertsService {
       concertSeat,
     });
   }
+
+  // 좌석 예약 반환
+  async rollbackSeat(seatId: number) {
+    // TODO status가 reserved인 seatId의 상태를 open으로 변경
+    const result = await this.repository.updateReservedSeatToOpen(seatId);
+    if (result == false) {
+      throw new Error('좌석 상태 변경 실패');
+    }
+  }
+
+  // 공연 meta data 삭제
+  async deleteMetaData(concertMetaDataId: number) {
+    // TODO 해당 id의 콘서트 메타 데이터를 삭제
+    const result =
+      await this.repository.deleteConcertMetaData(concertMetaDataId);
+    if (result == false) {
+      throw new Error('콘서트 메타 데이터 삭제 실패');
+    }
+  }
 }
