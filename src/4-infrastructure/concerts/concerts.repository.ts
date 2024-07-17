@@ -132,25 +132,30 @@ export class ConcertsRepository {
   }
 
   // status가 reserved인 seatId의 상태를 open으로 변경
-  async updateReservedSeatToOpen(seatId: number): Promise<boolean> {
-    const { affected } = await this.concertSeatRepository.update(
-      {
-        id: seatId,
-        status: ConcertSeatStatusEnum.RESERVED,
-      },
+  async updateReservedSeatsToOpen(
+    entityManager: EntityManager,
+    seatIds: Array<number>,
+  ): Promise<boolean> {
+    const { affected } = await entityManager.update(
+      ConcertSeatEntity,
+      seatIds,
       {
         status: ConcertSeatStatusEnum.OPEN,
       },
     );
-    return 0 < affected;
+    return seatIds.length == affected;
   }
 
   // 콘서트 메타 데이터를 삭제
-  async deleteConcertMetaData(concertMetaDataId: number) {
-    const { affected } = await this.concertMeataDataRepository.delete({
-      id: concertMetaDataId,
-    });
+  async deleteConcertMetaData(
+    entityManager: EntityManager,
+    concertMetaDataIds: Array<number>,
+  ): Promise<boolean> {
+    const { affected } = await entityManager.delete(
+      ConcertMetaDataEntity,
+      concertMetaDataIds,
+    );
 
-    return 0 < affected;
+    return concertMetaDataIds.length == affected;
   }
 }

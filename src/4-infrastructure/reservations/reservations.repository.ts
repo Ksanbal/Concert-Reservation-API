@@ -4,7 +4,7 @@ import {
   ReservationEntity,
   ReservationStatusEnum,
 } from './entities/reservation.entity';
-import { In, LessThanOrEqual, Repository } from 'typeorm';
+import { EntityManager, In, LessThanOrEqual, Repository } from 'typeorm';
 import { ReservationsModel } from 'src/3-domain/reservations/reservations.model';
 import { ConcertMetaDataEntity } from '../concerts/entities/concert-meta-data.entity';
 
@@ -56,8 +56,15 @@ export class ReservationsRepository {
     );
   }
 
-  async delete(id: number): Promise<boolean> {
-    const { affected } = await this.reservationRepository.delete({ id });
-    return 0 < affected;
+  async delete(
+    entityManager: EntityManager,
+    reservations: ReservationsModel[],
+  ): Promise<boolean> {
+    const { affected } = await entityManager.delete(
+      ReservationEntity,
+      reservations.map((e) => e.id),
+    );
+
+    return reservations.length == affected;
   }
 }

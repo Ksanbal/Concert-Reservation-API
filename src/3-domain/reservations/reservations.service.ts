@@ -4,6 +4,7 @@ import { ReservationsModel } from './reservations.model';
 import { ReservationsCreateProps } from './reservations.props';
 import * as dayjs from 'dayjs';
 import { ReservationStatusEnum } from 'src/4-infrastructure/reservations/entities/reservation.entity';
+import { EntityManager } from 'typeorm';
 
 @Injectable()
 export class ReservationsService {
@@ -24,7 +25,16 @@ export class ReservationsService {
     return this.reservationsRepository.findAllUnpaid();
   }
 
-  async delete(id: number) {
-    return this.reservationsRepository.delete(id);
+  async delete(
+    entityManager: EntityManager,
+    reservations: ReservationsModel[],
+  ) {
+    const result = await this.reservationsRepository.delete(
+      entityManager,
+      reservations,
+    );
+    if (result == false) {
+      throw new Error('예약 삭제 실패');
+    }
   }
 }

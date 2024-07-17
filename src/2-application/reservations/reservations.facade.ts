@@ -3,6 +3,7 @@ import { ConcertsService } from 'src/3-domain/concerts/concerts.service';
 import { QueueService } from 'src/3-domain/queue/queue.service';
 import { ReservationsService } from 'src/3-domain/reservations/reservations.service';
 import { ReservationsFacadeCreateProps } from './reservations.facade-props';
+import { DataSource, EntityManager } from 'typeorm';
 
 @Injectable()
 export class ReservationsFacade {
@@ -10,6 +11,7 @@ export class ReservationsFacade {
     private readonly queueService: QueueService,
     private readonly concertsService: ConcertsService,
     private readonly reservationsService: ReservationsService,
+    private readonly dataSource: DataSource,
   ) {}
 
   /**
@@ -44,23 +46,23 @@ export class ReservationsFacade {
     // 미결제 예약 정보 조회
     const reservations = await this.reservationsService.getUnpaidReservations();
 
-    for (const reservation of reservations) {
-      // 좌석 예약 반환 처리
-      try {
-        await this.concertsService.rollbackSeat(
-          reservation.concertMetaData.concertSeatId,
-        );
+    // 트랜잭션 시작
+    try {
+      await this.dataSource.transaction(
+        async (entityManager: EntityManager) => {
+          // 좌석 예약 반환 처리 & 공연 meta data 삭제
+          const concertMetaDatas = reservations.map((e) => e.concertMetaData);
+          await this.concertsService.rollbackReserved(
+            entityManager,
+            concertMetaDatas,
+          );
 
-        // 예약 정보 삭제
-        await this.reservationsService.delete(reservation.id);
-
-        // 공연 meta data 삭제
-        await this.concertsService.deleteMetaData(
-          reservation.concertMetaData.id,
-        );
-      } catch (error) {
-        console.error(error);
-      }
+          // 예약 정보 삭제
+          await this.reservationsService.delete(entityManager, reservations);
+        },
+      );
+    } catch (error) {
+      console.error('공연 좌석 예약 반환 스케줄 중 트랜잭션 오류');
     }
   }
 }
