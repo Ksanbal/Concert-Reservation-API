@@ -1,5 +1,5 @@
 import { UsersRepository } from 'src/4-infrastructure/users/users.repository';
-import { UsersModel } from './users.model';
+import { PointModel, UsersModel } from './users.model';
 import { UsersServiceGetProps } from './users.props';
 import {
   BadRequestException,
@@ -47,5 +47,32 @@ export class UsersService {
       point,
       PointHistoryTypeEnum.USE,
     );
+  }
+
+  async getPoint(userId: number) {
+    const point = await this.usersRepository.findPointByUserId(userId);
+    if (!point) {
+      throw new NotFoundException('포인트 정보를 찾을 수 없습니다.');
+    }
+
+    return point;
+  }
+
+  async chargePoint(
+    entityManage: EntityManager,
+    userId: number,
+    amount: number,
+  ): Promise<PointModel> {
+    const point = await this.usersRepository.findWithPointById(
+      entityManage,
+      userId,
+    );
+    if (!point) {
+      throw new NotFoundException('포인트 정보를 찾을 수 없습니다.');
+    }
+
+    point.amount += amount;
+
+    return await this.usersRepository.updatePoint(entityManage, point);
   }
 }

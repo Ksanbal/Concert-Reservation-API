@@ -23,14 +23,18 @@ export class UsersModel {
 }
 
 export class PointModel {
-  id: number;
-  userId: number;
-  amount: number;
+  constructor(
+    public id: number,
+    public userId: number,
+    public amount: number,
+  ) {}
 
-  constructor(pointEntity: PointEntity) {
-    this.id = pointEntity.id;
-    this.userId = pointEntity.userId;
-    this.amount = pointEntity.amount;
+  static fromEntity(entity: PointEntity | null) {
+    if (entity == null) {
+      return null;
+    }
+
+    return new PointModel(entity.id, entity.userId, entity.amount);
   }
 }
 

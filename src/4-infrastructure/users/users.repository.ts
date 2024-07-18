@@ -14,6 +14,8 @@ export class UsersRepository {
   constructor(
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
+    @InjectRepository(PointEntity)
+    private readonly pointRepository: Repository<PointEntity>,
   ) {}
 
   async findById(id: number): Promise<UsersModel> {
@@ -30,17 +32,22 @@ export class UsersRepository {
       where: {
         userId,
       },
+      lock: {
+        mode: 'pessimistic_write',
+      },
     });
 
     if (entity == null) {
       return null;
     }
 
-    return new PointModel(entity);
+    return PointModel.fromEntity(entity);
   }
 
   async updatePoint(entityManager: EntityManager, point: PointModel) {
     await entityManager.update(PointEntity, point.id, point);
+
+    return point;
   }
 
   async createPointHistory(
@@ -53,5 +60,13 @@ export class UsersRepository {
       amount: point.amount,
       type,
     });
+  }
+
+  async findPointByUserId(userId: number): Promise<PointModel> {
+    const entity = await this.pointRepository.findOneBy({
+      userId,
+    });
+
+    return PointModel.fromEntity(entity);
   }
 }
