@@ -118,4 +118,11 @@ export class QueueService {
 
     return queue;
   }
+
+  /**
+   * 해당 토큰을 만료처리합니다.
+   */
+  async expire(queue: QueueModel) {
+    await this.queueRepository.delete(queue);
+  }
 }

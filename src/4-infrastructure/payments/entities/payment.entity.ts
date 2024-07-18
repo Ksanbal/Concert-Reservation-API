@@ -17,5 +17,5 @@ export class PaymentEntity {
   reservationId: number;
 
   @Column()
-  userid: number;
+  userId: number;
 }

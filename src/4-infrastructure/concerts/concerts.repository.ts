@@ -158,4 +158,16 @@ export class ConcertsRepository {
 
     return concertMetaDataIds.length == affected;
   }
+
+  async updateSeatStatusById(
+    entityManager: EntityManager,
+    seatId: number,
+    status: ConcertSeatStatusEnum,
+  ) {
+    const { affected } = await entityManager.update(ConcertSeatEntity, seatId, {
+      status,
+    });
+
+    return affected == 1;
+  }
 }

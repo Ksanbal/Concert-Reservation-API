@@ -118,4 +118,17 @@ export class ConcertsService {
       throw new Error('공연 메타데이터 삭제 실패');
     }
   }
+
+  // 예약 좌석의 상태를 결제로 변경
+  async paySeat(entityManager: EntityManager, seatId: number) {
+    const result = await this.repository.updateSeatStatusById(
+      entityManager,
+      seatId,
+      ConcertSeatStatusEnum.SOLDOUT,
+    );
+
+    if (result == false) {
+      throw new Error('좌석 결제처리 실패');
+    }
+  }
 }

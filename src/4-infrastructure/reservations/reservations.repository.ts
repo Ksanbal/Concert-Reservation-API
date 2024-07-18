@@ -67,4 +67,27 @@ export class ReservationsRepository {
 
     return reservations.length == affected;
   }
+
+  async findById(id: number): Promise<ReservationsModel> {
+    const reservation = await this.reservationRepository.findOne({
+      where: {
+        id,
+      },
+    });
+
+    const concertMetaData = await this.concertMetaDataRepository.findOne({
+      where: {
+        id: reservation.concertMetaDataId,
+      },
+    });
+
+    return ReservationsModel.fromEntity(reservation, concertMetaData);
+  }
+
+  async update(
+    entityManager: EntityManager,
+    reservation: ReservationsModel,
+  ): Promise<ReservationsModel> {
+    return await entityManager.save(reservation);
+  }
 }

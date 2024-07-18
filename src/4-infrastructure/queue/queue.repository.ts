@@ -92,4 +92,12 @@ export class QueueRepository {
 
     return entities.map(QueueModel.fromEntity);
   }
+
+  async delete(queue: QueueModel) {
+    try {
+      await this.queueRepository.delete(queue.id);
+    } catch (error) {
+      return false;
+    }
+  }
 }

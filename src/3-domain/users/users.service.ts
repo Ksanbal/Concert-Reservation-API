@@ -1,7 +1,13 @@
 import { UsersRepository } from 'src/4-infrastructure/users/users.repository';
 import { UsersModel } from './users.model';
 import { UsersServiceGetProps } from './users.props';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { EntityManager } from 'typeorm';
+import { PointHistoryTypeEnum } from 'src/4-infrastructure/users/entities/point-history.entity';
 
 @Injectable()
 export class UsersService {
@@ -15,5 +21,31 @@ export class UsersService {
     }
 
     return user;
+  }
+
+  async use(entityManager: EntityManager, userId: number, amount: number) {
+    // 사용자 잔액 검증
+    const point = await this.usersRepository.findWithPointById(
+      entityManager,
+      userId,
+    );
+    if (point == null) {
+      throw new Error('포인트가 없음!');
+    }
+
+    if (point.amount < amount) {
+      throw new BadRequestException('잔액이 부족합니다!');
+    }
+
+    // 포인트  차감
+    point.amount -= amount;
+    await this.usersRepository.updatePoint(entityManager, point);
+
+    // 포인트 사용내역 생성
+    await this.usersRepository.createPointHistory(
+      entityManager,
+      point,
+      PointHistoryTypeEnum.USE,
+    );
   }
 }
