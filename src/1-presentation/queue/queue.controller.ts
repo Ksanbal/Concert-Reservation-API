@@ -1,7 +1,6 @@
 import { Body, Controller, Get, Post, Put, Headers } from '@nestjs/common';
 import { QueueCreateTokenReqDto } from './dto/request/queue.create-token.req.dto';
 import { QueueTokenResDto } from './dto/response/queue.token.res.dto';
-import { QueueTokenStatusEnum } from './dto/enum/queue.token-status.enum';
 import {
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -9,10 +8,13 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { QueueFacade } from 'src/2-application/queue/queue.facade';
 
 @ApiTags('Queue')
 @Controller('queue')
 export class QueueController {
+  constructor(private readonly queueFacade: QueueFacade) {}
+
   // 대기열 토큰 발급
   @ApiOperation({
     summary: '대기열 토큰 발급',
@@ -27,12 +29,8 @@ export class QueueController {
   async create(
     @Body() body: QueueCreateTokenReqDto,
   ): Promise<QueueTokenResDto> {
-    return new QueueTokenResDto({
-      token: 'd07edb0f-3ac1-45a3-8972-7d263958b59d',
-      expiredAt: new Date('2024-12-31'),
-      status: QueueTokenStatusEnum.WAIT,
-      remain: 1,
-    });
+    const result = await this.queueFacade.create(body);
+    return result;
   }
 
   // 대기열 토큰 유효기간 연장
@@ -54,12 +52,8 @@ export class QueueController {
   async extend(
     @Headers('authorization') token: string,
   ): Promise<QueueTokenResDto> {
-    return new QueueTokenResDto({
-      token: token,
-      expiredAt: new Date('2024-12-31'),
-      status: QueueTokenStatusEnum.WAIT,
-      remain: 1,
-    });
+    const result = await this.queueFacade.extend({ token });
+    return result;
   }
 
   // 대기열 토큰 유효성 체크
@@ -81,11 +75,7 @@ export class QueueController {
   async validateToken(
     @Headers('authorization') token: string,
   ): Promise<QueueTokenResDto> {
-    return new QueueTokenResDto({
-      token: token,
-      expiredAt: new Date('2024-12-31'),
-      status: QueueTokenStatusEnum.WAIT,
-      remain: 1,
-    });
+    const result = await this.queueFacade.get({ token });
+    return result;
   }
 }

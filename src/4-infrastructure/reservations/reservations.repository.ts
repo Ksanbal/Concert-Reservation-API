@@ -84,10 +84,9 @@ export class ReservationsRepository {
     return ReservationsModel.fromEntity(reservation, concertMetaData);
   }
 
-  async update(
-    entityManager: EntityManager,
-    reservation: ReservationsModel,
-  ): Promise<ReservationsModel> {
-    return await entityManager.save(reservation);
+  async update(entityManager: EntityManager, reservation: ReservationsModel) {
+    await entityManager.update(ReservationEntity, reservation.id, {
+      status: reservation.status,
+    });
   }
 }

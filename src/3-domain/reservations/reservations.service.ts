@@ -50,8 +50,8 @@ export class ReservationsService {
   async payReservation(
     entityManager: EntityManager,
     reservation: ReservationsModel,
-  ): Promise<ReservationsModel> {
+  ) {
     reservation.status = ReservationStatusEnum.PAID;
-    return await this.reservationsRepository.update(entityManager, reservation);
+    await this.reservationsRepository.update(entityManager, reservation);
   }
 }

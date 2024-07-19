@@ -19,9 +19,9 @@ export class QueueFacade {
    * 대기열 토큰 발급
    */
   async create(args: QueueServiceCreateProps): Promise<QueueModel> {
-    await this.usersService.get({ id: args.userId });
+    const user = await this.usersService.get({ id: args.userId });
 
-    return this.queueService.create(args);
+    return this.queueService.create({ userId: user.id });
   }
 
   /**

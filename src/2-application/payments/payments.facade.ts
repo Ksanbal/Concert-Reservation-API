@@ -1,6 +1,7 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { PaymentsPayReqDto } from 'src/1-presentation/payments/dto/request/payments.pay.req.dto';
 import { ConcertsService } from 'src/3-domain/concerts/concerts.service';
+import { PaymentsModel } from 'src/3-domain/payments/payments.model';
 import { PaymentsService } from 'src/3-domain/payments/payments.service';
 import { QueueService } from 'src/3-domain/queue/queue.service';
 import { ReservationsService } from 'src/3-domain/reservations/reservations.service';
@@ -18,7 +19,10 @@ export class PaymentsFacade {
     private readonly dataSource: DataSource,
   ) {}
 
-  async payReservation(token: string, dto: PaymentsPayReqDto) {
+  async payReservation(
+    token: string,
+    dto: PaymentsPayReqDto,
+  ): Promise<PaymentsModel> {
     // 토큰 유효성 체크
     const queue = await this.queueService.getWorking({ token });
 
@@ -51,7 +55,7 @@ export class PaymentsFacade {
         );
 
         // 결제 내역 생성
-        await this.paymentsService.create(
+        payment = await this.paymentsService.create(
           entityManager,
           reservation.id,
           reservation.userId,
