@@ -1,6 +1,6 @@
 import { IsDate, IsEnum, IsNumber, IsUUID } from 'class-validator';
-import { QueueTokenStatusEnum } from '../enum/queue.token-status.enum';
 import { ApiProperty } from '@nestjs/swagger';
+import { QueueStatusEnum } from 'src/4-infrastructure/queue/entities/queue.entity';
 
 export class QueueTokenResDto {
   @ApiProperty({
@@ -14,7 +14,7 @@ export class QueueTokenResDto {
   expiredAt: Date;
 
   @ApiProperty()
-  @IsEnum(QueueTokenStatusEnum)
+  @IsEnum(QueueStatusEnum)
   status: string;
 
   @ApiProperty()
@@ -29,6 +29,6 @@ export class QueueTokenResDto {
 type QueueTokenResProps = {
   token: string;
   expiredAt: Date;
-  status: QueueTokenStatusEnum;
+  status: QueueStatusEnum;
   remain: number;
 };
