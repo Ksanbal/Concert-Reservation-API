@@ -6,8 +6,9 @@ import {
   IsString,
   ValidateNested,
 } from 'class-validator';
-import { PaymentsReservationStatusEnum } from '../enum/payments.reservation-status.enum';
 import { ApiProperty } from '@nestjs/swagger';
+import { PaymentsModel } from 'src/3-domain/payments/payments.model';
+import { ReservationStatusEnum } from 'src/4-infrastructure/reservations/entities/reservation.entity';
 
 class ConcertMetaData {
   @ApiProperty()
@@ -44,9 +45,9 @@ class Reservation {
   @IsDate()
   expiredAt: Date;
 
-  @ApiProperty({ enum: PaymentsReservationStatusEnum })
-  @IsEnum(PaymentsReservationStatusEnum)
-  status: PaymentsReservationStatusEnum;
+  @ApiProperty({ enum: ReservationStatusEnum })
+  @IsEnum(ReservationStatusEnum)
+  status: ReservationStatusEnum;
 
   @ApiProperty()
   @ValidateNested()
@@ -63,13 +64,30 @@ export class PaymentsPayResDto {
   @IsDate()
   createdAt: Date;
 
-  @ApiProperty({ type: Reservation })
-  @ValidateNested()
-  @Type(() => Reservation)
-  reservation: Reservation;
+  @ApiProperty()
+  @IsNumber()
+  reservationId: number;
+
+  @ApiProperty()
+  @IsNumber()
+  userId: number;
+
+  // @ApiProperty({ type: Reservation })
+  // @ValidateNested()
+  // @Type(() => Reservation)
+  // reservation: Reservation;
 
   constructor(args: PaymentsPayResProps) {
     Object.assign(this, args);
+  }
+
+  static fromModel(model: PaymentsModel) {
+    return new PaymentsPayResDto({
+      id: model.id,
+      createdAt: model.createdAt,
+      reservationId: model.reservationId,
+      userId: model.userId,
+    });
   }
 }
 
@@ -85,12 +103,14 @@ type ReservationProps = {
   createdAt: Date;
   updatedAt: Date;
   expiredAt: Date;
-  status: PaymentsReservationStatusEnum;
+  status: ReservationStatusEnum;
   concertMetaData: ConcertMetaDataProps;
 };
 
 type PaymentsPayResProps = {
   id: number;
   createdAt: Date;
-  reservation: ReservationProps;
+  // reservation: ReservationProps;
+  reservationId: number;
+  userId: number;
 };

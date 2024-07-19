@@ -565,69 +565,6 @@
           "reservationId"
         ]
       },
-      "ConcertMetaData": {
-        "type": "object",
-        "properties": {
-          "concertName": {
-            "type": "string"
-          },
-          "concertScheduleDate": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "concertSeatNumber": {
-            "type": "number"
-          },
-          "concertSeatPrice": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "concertName",
-          "concertScheduleDate",
-          "concertSeatNumber",
-          "concertSeatPrice"
-        ]
-      },
-      "Reservation": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "number"
-          },
-          "createdAt": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "updatedAt": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "expiredAt": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "reserved",
-              "expired",
-              "paied"
-            ]
-          },
-          "concertMetaData": {
-            "$ref": "#/components/schemas/ConcertMetaData"
-          }
-        },
-        "required": [
-          "id",
-          "createdAt",
-          "updatedAt",
-          "expiredAt",
-          "status",
-          "concertMetaData"
-        ]
-      },
       "PaymentsPayResDto": {
         "type": "object",
         "properties": {
@@ -638,14 +575,18 @@
             "format": "date-time",
             "type": "string"
           },
-          "reservation": {
-            "$ref": "#/components/schemas/Reservation"
+          "reservationId": {
+            "type": "number"
+          },
+          "userId": {
+            "type": "number"
           }
         },
         "required": [
           "id",
           "createdAt",
-          "reservation"
+          "reservationId",
+          "userId"
         ]
       },
       "Schedule": {
@@ -716,7 +657,7 @@
             "type": "string",
             "enum": [
               "closed",
-              "able",
+              "open",
               "reserved",
               "soldout"
             ]
@@ -744,6 +685,30 @@
           "seatId"
         ]
       },
+      "ConcertMetaData": {
+        "type": "object",
+        "properties": {
+          "concertName": {
+            "type": "string"
+          },
+          "concertScheduleDate": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "concertSeatNumber": {
+            "type": "number"
+          },
+          "concertSeatPrice": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "concertName",
+          "concertScheduleDate",
+          "concertSeatNumber",
+          "concertSeatPrice"
+        ]
+      },
       "ReservationsResDto": {
         "type": "object",
         "properties": {
@@ -767,7 +732,7 @@
             "enum": [
               "reserved",
               "expired",
-              "paied"
+              "paid"
             ]
           },
           "concertMetaData": {

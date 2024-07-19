@@ -1,7 +1,6 @@
 import { Body, Controller, Headers, Post } from '@nestjs/common';
 import { PaymentsPayReqDto } from './dto/request/payments.pay.req.dto';
 import { PaymentsPayResDto } from './dto/response/payments.pay.res.dto';
-import { PaymentsReservationStatusEnum } from './dto/enum/payments.reservation-status.enum';
 import {
   ApiBadRequestResponse,
   ApiCreatedResponse,
@@ -10,10 +9,13 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { PaymentsFacade } from 'src/2-application/payments/payments.facade';
 
 @ApiTags('Payments')
 @Controller('payments')
 export class PaymentsController {
+  constructor(private readonly paymentsFacade: PaymentsFacade) {}
+
   @ApiOperation({
     summary: '공연 결제',
   })
@@ -38,22 +40,7 @@ export class PaymentsController {
     @Headers('authorization') token: string,
     @Body() body: PaymentsPayReqDto,
   ): Promise<PaymentsPayResDto> {
-    return new PaymentsPayResDto({
-      id: 1,
-      createdAt: new Date('2023-04-12T14:30:00+09:00'),
-      reservation: {
-        id: body.reservationId,
-        createdAt: new Date('2023-04-12T14:30:00+09:00'),
-        updatedAt: new Date('2023-04-12T14:30:00+09:00'),
-        expiredAt: new Date('2023-04-12T14:30:00+09:00'),
-        status: PaymentsReservationStatusEnum.PAIED,
-        concertMetaData: {
-          concertName: '카리나의 왁자지껄',
-          concertScheduleDate: new Date('2023-04-12T14:30:00+09:00'),
-          concertSeatNumber: 1,
-          concertSeatPrice: 50000,
-        },
-      },
-    });
+    const result = await this.paymentsFacade.payReservation(token, body);
+    return PaymentsPayResDto.fromModel(result);
   }
 }

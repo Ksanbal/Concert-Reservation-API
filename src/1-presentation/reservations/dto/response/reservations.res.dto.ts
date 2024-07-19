@@ -5,9 +5,10 @@ import {
   IsString,
   ValidateNested,
 } from 'class-validator';
-import { ReservationStatusEnum } from '../enum/reservations.status.enum';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
+import { ReservationsModel } from 'src/3-domain/reservations/reservations.model';
+import { ReservationStatusEnum } from 'src/4-infrastructure/reservations/entities/reservation.entity';
 
 class ConcertMetaData {
   @ApiProperty()
@@ -59,6 +60,22 @@ export class ReservationsResDto {
 
   constructor(args: ReservationResProps) {
     Object.assign(this, args);
+  }
+
+  static fromModel(model: ReservationsModel) {
+    return new ReservationsResDto({
+      id: model.id,
+      createdAt: model.createdAt,
+      updatedAt: model.updatedAt,
+      expiredAt: model.expiredAt,
+      status: model.status,
+      concertMetaData: {
+        concertName: model.concertMetaData.concertName,
+        concertScheduleDate: model.concertMetaData.concertScheduleDate,
+        concertSeatNumber: model.concertMetaData.concertSeatNumber,
+        concertSeatPrice: model.concertMetaData.concertSeatPrice,
+      },
+    });
   }
 }
 

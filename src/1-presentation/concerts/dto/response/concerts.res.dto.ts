@@ -7,6 +7,10 @@ import {
   IsString,
   ValidateNested,
 } from 'class-validator';
+import {
+  ConcertScheduleModel,
+  ConcertsModel,
+} from 'src/3-domain/concerts/concerts.model';
 
 class Schedule {
   @ApiProperty()
@@ -28,6 +32,20 @@ class Schedule {
   @ApiProperty()
   @IsNumber()
   leftSeat: number;
+
+  constructor(args: ScheduleProps) {
+    Object.assign(this, args);
+  }
+
+  static fromModel(model: ConcertScheduleModel) {
+    return new Schedule({
+      id: model.id,
+      date: model.date,
+      ticketOpenAt: model.ticketOpenAt,
+      ticketCloseAt: model.ticketCloseAt,
+      leftSeat: model.leftSeat,
+    });
+  }
 }
 
 export class ConcertsResDto {
@@ -47,6 +65,14 @@ export class ConcertsResDto {
 
   constructor(args: ConcertsResProps) {
     Object.assign(this, args);
+  }
+
+  static fromModel(model: ConcertsModel) {
+    return new ConcertsResDto({
+      id: model.id,
+      name: model.name,
+      schedule: model.schedules.map(Schedule.fromModel),
+    });
   }
 }
 

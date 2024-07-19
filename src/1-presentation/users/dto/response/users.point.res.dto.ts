@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNumber } from 'class-validator';
+import { PointModel } from 'src/3-domain/users/users.model';
 
 export class UsersPointResDto {
   @ApiProperty()
@@ -8,6 +9,12 @@ export class UsersPointResDto {
 
   constructor(args: UsersPointResProps) {
     Object.assign(this, args);
+  }
+
+  static fromModel(model: PointModel) {
+    return new UsersPointResDto({
+      amount: model.amount,
+    });
   }
 }
 
