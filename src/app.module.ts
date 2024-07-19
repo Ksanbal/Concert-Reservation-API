@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Logger, MiddlewareConsumer, Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { QueueModule } from './1-presentation/queue/queue.module';
@@ -9,6 +9,7 @@ import { ReservationsModule } from './1-presentation/reservations/reservations.m
 import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './libs/database/database.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { LoggerContextMiddleware } from './libs/middleware/logger-context.middleware';
 
 @Module({
   imports: [
@@ -26,6 +27,10 @@ import { ScheduleModule } from '@nestjs/schedule';
     DatabaseModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, Logger],
 })
-export class AppModule {}
+export class AppModule {
+  public configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(LoggerContextMiddleware).forRoutes('*');
+  }
+}

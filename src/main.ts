@@ -4,9 +4,14 @@ import { ValidationPipe } from '@nestjs/common/pipes';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as fs from 'fs';
 import { AllExceptionFilter } from './libs/filters/all-exception/all-exception.filter';
+import { winstonLogger } from './libs/logger/logger.config';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    // winston logger 적용
+    bufferLogs: true,
+    logger: winstonLogger,
+  });
 
   app.useGlobalPipes(new ValidationPipe());
 
