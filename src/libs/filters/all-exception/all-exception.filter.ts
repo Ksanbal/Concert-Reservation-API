@@ -3,11 +3,14 @@ import {
   Catch,
   ArgumentsHost,
   HttpException,
+  Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 
 @Catch()
 export class AllExceptionFilter implements ExceptionFilter {
+  private readonly logger: Logger = new Logger();
+
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
@@ -38,6 +41,10 @@ export class AllExceptionFilter implements ExceptionFilter {
       // 이외의 발생된 에러
       data.statusCode = 500;
       data.message = ['잠시후 다시 시도해주세요.'];
+
+      // Logging 추가
+      this.logger.error({ args: { request, response } });
+      this.logger.error(exception);
     }
 
     response.status(data.statusCode).json(data);

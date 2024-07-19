@@ -19,15 +19,9 @@ export class LoggerContextMiddleware implements NestMiddleware {
     res.on('finish', () => {
       const { statusCode } = res;
 
-      if (500 <= statusCode) {
-        this.logger.error(
-          `${datetime} USER-${authorization} ${method} ${originalUrl} ${statusCode} ${ip} ${userAgent}`,
-        );
-      } else {
-        this.logger.log(
-          `${datetime} USER-${authorization} ${method} ${originalUrl} ${statusCode} ${ip} ${userAgent}`,
-        );
-      }
+      this.logger.log(
+        `${datetime} USER-${authorization} ${method} ${originalUrl} ${statusCode} ${ip} ${userAgent}`,
+      );
     });
 
     next();
