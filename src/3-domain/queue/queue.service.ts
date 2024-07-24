@@ -4,6 +4,7 @@ import { QueueServiceCreateProps, QueueServiceGetProps } from './queue.props';
 import { QueueStatusEnum } from 'src/4-infrastructure/queue/entities/queue.entity';
 import * as dayjs from 'dayjs';
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -21,6 +22,11 @@ export class QueueService {
   ) {}
 
   async create(args: QueueServiceCreateProps): Promise<QueueModel> {
+    const lock = await this.redis.set('queue', 'lock', 'PX', 2000, 'NX');
+    if (!lock) {
+      throw new ConflictException('늦었어 돌아가');
+    }
+
     const queue = await this.dataSource.transaction(async (entityManager) => {
       let queue = await this.queueRepository.findByUserId(
         entityManager,
@@ -39,6 +45,7 @@ export class QueueService {
 
       return queue;
     });
+    await this.redis.del('queue');
 
     // 현재 working인 마지막 queue을 조회
     const lastWorkingQueue = await this.queueRepository.findLastWorkingQueue();
