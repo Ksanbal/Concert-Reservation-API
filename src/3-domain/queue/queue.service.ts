@@ -22,9 +22,21 @@ export class QueueService {
   ) {}
 
   async create(args: QueueServiceCreateProps): Promise<QueueModel> {
-    const lock = await this.redis.set('queue', 'lock', 'PX', 2000, 'NX');
-    if (!lock) {
-      throw new ConflictException('늦었어 돌아가');
+    let lock = null;
+    let retry = 0;
+    while (true) {
+      lock = await this.redis.set('queue', 'lock', 'PX', 2000, 'NX');
+
+      if (lock) {
+        break;
+      } else {
+        retry++;
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        if (10 < retry) {
+          throw new ConflictException('넌 안될 것 같다 그만 돌아가라.');
+        }
+      }
     }
 
     const queue = await this.dataSource.transaction(async (entityManager) => {
