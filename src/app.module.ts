@@ -10,6 +10,7 @@ import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './libs/database/database.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { LoggerContextMiddleware } from './libs/middleware/logger-context.middleware';
+import { RedisModule } from '@liaoliaots/nestjs-redis';
 
 @Module({
   imports: [
@@ -24,7 +25,13 @@ import { LoggerContextMiddleware } from './libs/middleware/logger-context.middle
     PaymentsModule,
     ConcertsModule,
     ReservationsModule,
-    DatabaseModule,
+    RedisModule.forRoot({
+      readyLog: true,
+      config: {
+        host: 'localhost',
+        port: 6379,
+      },
+    }),
   ],
   controllers: [AppController],
   providers: [AppService, Logger],

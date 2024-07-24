@@ -9,12 +9,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { InjectRedis } from '@liaoliaots/nestjs-redis';
+import Redis from 'ioredis';
 
 @Injectable()
 export class QueueService {
   constructor(
     private readonly queueRepository: QueueRepository,
     private readonly dataSource: DataSource,
+    @InjectRedis() private readonly redis: Redis,
   ) {}
 
   async create(args: QueueServiceCreateProps): Promise<QueueModel> {
