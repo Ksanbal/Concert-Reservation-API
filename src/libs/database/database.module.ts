@@ -39,6 +39,7 @@ import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
           PaymentEntity,
         ],
         synchronize: configService.get('DB_SYNCHRONIZE') === 'true', // 환경 변수를 boolean으로 변환
+        logging: true,
       }),
       inject: [ConfigService], // ConfigService를 주입합니다.
     }),

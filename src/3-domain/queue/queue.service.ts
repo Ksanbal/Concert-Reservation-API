@@ -8,23 +8,34 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 
 @Injectable()
 export class QueueService {
-  constructor(private readonly queueRepository: QueueRepository) {}
+  constructor(
+    private readonly queueRepository: QueueRepository,
+    private readonly dataSource: DataSource,
+  ) {}
 
   async create(args: QueueServiceCreateProps): Promise<QueueModel> {
-    let queue = await this.queueRepository.findByUserId(args.userId);
+    const queue = await this.dataSource.transaction(async (entityManager) => {
+      let queue = await this.queueRepository.findByUserId(
+        entityManager,
+        args.userId,
+      );
 
-    if (!queue) {
-      const expiredAt = dayjs().add(10, 'minute').toDate(); // 10분 후
+      if (!queue) {
+        const expiredAt = dayjs().add(10, 'minute').toDate(); // 10분 후
 
-      queue = await this.queueRepository.create({
-        userId: args.userId,
-        expiredAt,
-        status: QueueStatusEnum.WAIT,
-      });
-    }
+        queue = await this.queueRepository.create(entityManager, {
+          userId: args.userId,
+          expiredAt,
+          status: QueueStatusEnum.WAIT,
+        });
+      }
+
+      return queue;
+    });
 
     // 현재 working인 마지막 queue을 조회
     const lastWorkingQueue = await this.queueRepository.findLastWorkingQueue();
