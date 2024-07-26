@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn, VersionColumn } from 'typeorm';
 
 export enum ConcertSeatStatusEnum {
   CLOSED = 'closed',
@@ -25,4 +25,7 @@ export class ConcertSeatEntity {
     enum: ConcertSeatStatusEnum,
   })
   status: ConcertSeatStatusEnum;
+
+  @VersionColumn()
+  version: number;
 }

@@ -61,6 +61,23 @@ export class ConcertsRepository {
     );
   }
 
+  async findScheduleByIdWithTx(
+    manager: EntityManager,
+    id: number,
+  ): Promise<ConcertScheduleModel | null> {
+    // return ConcertScheduleModel.fromEntity(
+    //   await this.concertScheduleRepository.findOneBy({
+    //     id,
+    //   }),
+    // );
+    return ConcertScheduleModel.fromEntity(
+      await manager
+        .createQueryBuilder(ConcertScheduleEntity, 'schedule')
+        .where('id = :id', { id })
+        .getOne(),
+    );
+  }
+
   async findSeats(concertScheduleId: number): Promise<ConcertSeatsModel[]> {
     const entities = await this.concertSeatRepository.find({
       where: {
@@ -115,20 +132,44 @@ export class ConcertsRepository {
     return ConcertSeatsModel.fromEntity(
       await manager
         .createQueryBuilder(ConcertSeatEntity, 'seat')
-        .setLock('pessimistic_write')
+        // .setLock('pessimistic_write')
         .where('seat.id = :seatId', { seatId })
         .getOne(),
     );
   }
 
   async updateSeatStatus(manager: EntityManager, seat: ConcertSeatsModel) {
-    await manager.save(ConcertSeatEntity, seat);
+    // seat.version += 1;
+    // await manager.save(ConcertSeatEntity, seat);
+    await manager
+      .createQueryBuilder()
+      .setLock('optimistic', seat.version)
+      .update(ConcertSeatEntity)
+      .set({ status: seat.status })
+      .where('id = :id', { id: seat.id })
+      .execute();
   }
 
   async updateScheduleLeftSeat(scheduleId: number, leftSeat: number) {
     await this.concertScheduleRepository.update(scheduleId, {
       leftSeat,
     });
+  }
+
+  async updateScheduleLeftSeatWithTx(
+    manager: EntityManager,
+    scheduleId: number,
+    leftSeat: number,
+  ) {
+    // await this.concertScheduleRepository.update(scheduleId, {
+    //   leftSeat,
+    // });
+    await manager
+      .createQueryBuilder()
+      .update(ConcertScheduleEntity)
+      .set({ leftSeat })
+      .where('id = :id', { id: scheduleId })
+      .execute();
   }
 
   // status가 reserved인 seatId의 상태를 open으로 변경

@@ -62,6 +62,7 @@ export class ConcertSeatsModel {
     public number: number,
     public price: number,
     public status: ConcertSeatStatusEnum,
+    public version: number,
   ) {}
 
   static fromEntity(entity: ConcertSeatEntity | null) {
@@ -75,6 +76,7 @@ export class ConcertSeatsModel {
       entity.number,
       entity.price,
       entity.status,
+      entity.version,
     );
   }
 }
