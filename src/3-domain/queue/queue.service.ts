@@ -4,7 +4,6 @@ import { QueueServiceCreateProps, QueueServiceGetProps } from './queue.props';
 import { QueueStatusEnum } from 'src/4-infrastructure/queue/entities/queue.entity';
 import * as dayjs from 'dayjs';
 import {
-  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -12,6 +11,7 @@ import {
 import { DataSource } from 'typeorm';
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import Redis from 'ioredis';
+import Redlock from 'redlock';
 
 @Injectable()
 export class QueueService {
@@ -22,22 +22,9 @@ export class QueueService {
   ) {}
 
   async create(args: QueueServiceCreateProps): Promise<QueueModel> {
-    let lock = null;
-    let retry = 0;
-    while (true) {
-      lock = await this.redis.set('queue', 'lock', 'PX', 2000, 'NX');
+    const redlock = new Redlock([this.redis]);
 
-      if (lock) {
-        break;
-      } else {
-        retry++;
-        await new Promise((resolve) => setTimeout(resolve, 100));
-
-        if (10 < retry) {
-          throw new ConflictException('넌 안될 것 같다 그만 돌아가라.');
-        }
-      }
-    }
+    const lock = await redlock.acquire(['queue'], 2000);
 
     const queue = await this.dataSource.transaction(async (entityManager) => {
       let queue = await this.queueRepository.findByUserId(
@@ -57,7 +44,7 @@ export class QueueService {
 
       return queue;
     });
-    await this.redis.del('queue');
+    await lock.release();
 
     // 현재 working인 마지막 queue을 조회
     const lastWorkingQueue = await this.queueRepository.findLastWorkingQueue();
