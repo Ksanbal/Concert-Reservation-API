@@ -10,6 +10,7 @@ import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './libs/database/database.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { LoggerContextMiddleware } from './libs/middleware/logger-context.middleware';
+import { MyRedisModule } from './libs/redis/redis.module';
 
 @Module({
   imports: [
@@ -24,7 +25,7 @@ import { LoggerContextMiddleware } from './libs/middleware/logger-context.middle
     PaymentsModule,
     ConcertsModule,
     ReservationsModule,
-    DatabaseModule,
+    MyRedisModule,
   ],
   controllers: [AppController],
   providers: [AppService, Logger],

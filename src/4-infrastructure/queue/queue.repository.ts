@@ -1,6 +1,6 @@
 import { InjectRepository } from '@nestjs/typeorm';
 import { QueueEntity, QueueStatusEnum } from './entities/queue.entity';
-import { LessThan, MoreThanOrEqual, Not, Repository } from 'typeorm';
+import { EntityManager, LessThan, MoreThanOrEqual, Repository } from 'typeorm';
 import { QueueModel } from 'src/3-domain/queue/queue.model';
 import { QueueRepositoryCreateProps } from './queue.repository.props';
 import { Injectable } from '@nestjs/common';
@@ -25,16 +25,23 @@ export class QueueRepository {
     );
   }
 
-  async findByUserId(userId: number): Promise<QueueModel> {
-    return QueueModel.fromEntity(
-      await this.queueRepository.findOne({
-        where: {
-          userId,
-          expiredAt: MoreThanOrEqual(new Date()),
-          status: Not(QueueStatusEnum.EXPIRED),
-        },
-      }),
-    );
+  async findByUserId(
+    entityManager: EntityManager,
+    userId: number,
+  ): Promise<QueueModel> {
+    const entity = await entityManager
+      .createQueryBuilder(QueueEntity, 'queue')
+      .setLock('pessimistic_write') // pessimistic_read(공유락), pessimistic_write(배타락)
+      .where('queue.userId = :userId', { userId })
+      .andWhere('queue.expiredAt >= :expiredAt', {
+        expiredAt: new Date(),
+      })
+      .andWhere('queue.status != :status', {
+        status: QueueStatusEnum.EXPIRED,
+      })
+      .getOne();
+
+    return QueueModel.fromEntity(entity);
   }
 
   async findByToken(token: string): Promise<QueueModel> {
@@ -43,10 +50,14 @@ export class QueueRepository {
     );
   }
 
-  async create(args: QueueRepositoryCreateProps): Promise<QueueModel> {
-    const entity = this.queueRepository.create(args);
+  async create(
+    entityManager: EntityManager,
+    args: QueueRepositoryCreateProps,
+  ): Promise<QueueModel> {
+    let entity = this.queueRepository.create(args);
+    entity = await entityManager.save(entity);
 
-    return QueueModel.fromEntity(await this.queueRepository.save(entity));
+    return QueueModel.fromEntity(entity);
   }
 
   async update(queue: QueueModel): Promise<QueueModel> {

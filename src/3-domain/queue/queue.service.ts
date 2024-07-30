@@ -8,23 +8,44 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { DataSource } from 'typeorm';
+import Redlock from 'redlock';
+import Redis from 'ioredis';
+import { InjectRedis } from '@liaoliaots/nestjs-redis';
 
 @Injectable()
 export class QueueService {
-  constructor(private readonly queueRepository: QueueRepository) {}
+  constructor(
+    private readonly queueRepository: QueueRepository,
+    private readonly dataSource: DataSource,
+    @InjectRedis()
+    private readonly redis: Redis,
+  ) {}
 
   async create(args: QueueServiceCreateProps): Promise<QueueModel> {
-    let queue = await this.queueRepository.findByUserId(args.userId);
+    const redlock = new Redlock([this.redis]);
+    const lock = await redlock.acquire(['queue'], 2000);
 
-    if (!queue) {
-      const expiredAt = dayjs().add(10, 'minute').toDate(); // 10분 후
+    const queue = await this.dataSource.transaction(async (entityManager) => {
+      let queue = await this.queueRepository.findByUserId(
+        entityManager,
+        args.userId,
+      );
 
-      queue = await this.queueRepository.create({
-        userId: args.userId,
-        expiredAt,
-        status: QueueStatusEnum.WAIT,
-      });
-    }
+      if (!queue) {
+        const expiredAt = dayjs().add(10, 'minute').toDate(); // 10분 후
+
+        queue = await this.queueRepository.create(entityManager, {
+          userId: args.userId,
+          expiredAt,
+          status: QueueStatusEnum.WAIT,
+        });
+      }
+
+      return queue;
+    });
+
+    await lock.release();
 
     // 현재 working인 마지막 queue을 조회
     const lastWorkingQueue = await this.queueRepository.findLastWorkingQueue();
