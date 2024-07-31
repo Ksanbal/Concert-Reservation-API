@@ -1,4 +1,4 @@
-import { Body, Controller, Headers, Post } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { ReservationsCreateReqDto } from './dto/request/reservations.reserve.req.dto';
 import { ReservationsResDto } from './dto/response/reservations.res.dto';
 import {
@@ -10,9 +10,13 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { ReservationsFacade } from 'src/2-application/reservations/reservations.facade';
+import { QueueGuard } from 'src/libs/guards/queue/queue.guard';
+import { CurrentQueue } from 'src/libs/decorators/current-queue/current-queue.decorator';
+import { QueueModel } from 'src/3-domain/queue/queue.model';
 
 @ApiTags('Reservations')
 @Controller('reservations')
+@UseGuards(QueueGuard)
 export class ReservationsController {
   constructor(private readonly reservationsFacade: ReservationsFacade) {}
 
@@ -37,10 +41,10 @@ export class ReservationsController {
   })
   @Post()
   async create(
-    @Headers('authorization') token: string,
+    @CurrentQueue() queue: QueueModel,
     @Body() body: ReservationsCreateReqDto,
   ): Promise<ReservationsResDto> {
-    const result = await this.reservationsFacade.create(token, body);
+    const result = await this.reservationsFacade.create(queue, body);
     return ReservationsResDto.fromModel(result);
   }
 }

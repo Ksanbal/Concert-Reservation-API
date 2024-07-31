@@ -35,9 +35,7 @@ export class QueueFacade {
    * 대기열 토큰 유효기간 연장
    */
   async extend(args: QueueServiceGetProps): Promise<QueueModel> {
-    const queue = await this.queueService.get(args);
-
-    return this.queueService.extend(queue);
+    return this.queueService.extend(args.queue);
   }
 
   /**

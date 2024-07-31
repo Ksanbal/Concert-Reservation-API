@@ -1,14 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { ConcertsService } from 'src/3-domain/concerts/concerts.service';
-import { QueueService } from 'src/3-domain/queue/queue.service';
 import { ReservationsService } from 'src/3-domain/reservations/reservations.service';
 import { ReservationsFacadeCreateProps } from './reservations.facade-props';
 import { DataSource, EntityManager } from 'typeorm';
+import { QueueModel } from 'src/3-domain/queue/queue.model';
 
 @Injectable()
 export class ReservationsFacade {
   constructor(
-    private readonly queueService: QueueService,
     private readonly concertsService: ConcertsService,
     private readonly reservationsService: ReservationsService,
     private readonly dataSource: DataSource,
@@ -17,10 +16,7 @@ export class ReservationsFacade {
   /**
    * 공연 좌석 예약
    */
-  async create(token: string, args: ReservationsFacadeCreateProps) {
-    // 토큰 유효성 체크
-    const queue = await this.queueService.getWorking({ token });
-
+  async create(queue: QueueModel, args: ReservationsFacadeCreateProps) {
     // 좌석 예약처리 요청
     await this.concertsService.reserveSeat(args.seatId);
 

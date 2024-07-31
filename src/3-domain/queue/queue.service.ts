@@ -1,6 +1,10 @@
 import { QueueRepository } from 'src/4-infrastructure/queue/queue.repository';
 import { QueueModel } from './queue.model';
-import { QueueServiceCreateProps, QueueServiceGetProps } from './queue.props';
+import {
+  QueueServiceCreateProps,
+  QueueServiceGetProps,
+  QueueServiceGetWorkingProps,
+} from './queue.props';
 import { QueueStatusEnum } from 'src/4-infrastructure/queue/entities/queue.entity';
 import * as dayjs from 'dayjs';
 import {
@@ -58,19 +62,7 @@ export class QueueService {
   }
 
   async get(args: QueueServiceGetProps): Promise<QueueModel> {
-    const queue = await this.queueRepository.findByToken(args.token);
-
-    if (!queue) {
-      throw new NotFoundException('토큰이 존재하지 않습니다.');
-    }
-
-    // 만료시간이 지났다면
-    if (
-      queue.status == QueueStatusEnum.EXPIRED ||
-      dayjs(queue.expiredAt).isBefore(dayjs())
-    ) {
-      throw new ForbiddenException('이미 만료된 토큰입니다.');
-    }
+    const queue = args.queue;
 
     // 현재 working인 마지막 queue을 조회
     const lastWorkingQueue = await this.queueRepository.findLastWorkingQueue();
@@ -118,7 +110,7 @@ export class QueueService {
     await this.queueRepository.bulkUpdate(expiredQueues);
   }
 
-  async getWorking(args: QueueServiceGetProps): Promise<QueueModel> {
+  async getWorking(args: QueueServiceGetWorkingProps): Promise<QueueModel> {
     const queue = await this.queueRepository.findByToken(args.token);
 
     if (!queue) {

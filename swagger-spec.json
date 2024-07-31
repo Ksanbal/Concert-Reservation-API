@@ -56,16 +56,7 @@
       "put": {
         "operationId": "QueueController_extend",
         "summary": "대기열 토큰 유효기간 연장",
-        "parameters": [
-          {
-            "name": "authorization",
-            "required": true,
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "parameters": [],
         "responses": {
           "200": {
             "description": "",
@@ -107,16 +98,7 @@
       "get": {
         "operationId": "QueueController_validateToken",
         "summary": "대기열 토큰 유효성 체크",
-        "parameters": [
-          {
-            "name": "authorization",
-            "required": true,
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "parameters": [],
         "responses": {
           "200": {
             "description": "",
@@ -230,16 +212,7 @@
       "post": {
         "operationId": "PaymentsController_pay",
         "summary": "공연 결제",
-        "parameters": [
-          {
-            "name": "authorization",
-            "required": true,
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
@@ -301,16 +274,7 @@
       "get": {
         "operationId": "ConcertsController_list",
         "summary": "예약 가능한 공연 날짜 조회",
-        "parameters": [
-          {
-            "name": "Authorization",
-            "required": true,
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "parameters": [],
         "responses": {
           "200": {
             "description": "",
@@ -356,14 +320,6 @@
         "operationId": "ConcertsController_seats",
         "summary": "공연 좌석 조회",
         "parameters": [
-          {
-            "name": "Authorization",
-            "required": true,
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          },
           {
             "name": "scheduleId",
             "required": true,
@@ -417,16 +373,7 @@
       "post": {
         "operationId": "ReservationsController_create",
         "summary": "좌석 예약",
-        "parameters": [
-          {
-            "name": "authorization",
-            "required": true,
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
