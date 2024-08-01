@@ -124,7 +124,6 @@ export class QueueService {
   }
 
   async processExpiredQueue(): Promise<void> {
-    // TODO
     const now = new Date();
 
     // WaitingQueue에서 만료된 데이터 삭제
@@ -158,17 +157,10 @@ export class QueueService {
     }
   }
 
-  async processQueue(): Promise<void> {
-    // TODO
-    // 100 - Active인 토큰 수 구하기
-    const activeQueues = await this.queueRedisRepository.countAllFromActive();
-    const leftSeat = 100 - activeQueues;
-
-    if (leftSeat == 0) return;
-
-    // WaitingQueue에서 해당하는 수만큼 pop
-    const results =
-      await this.queueRedisRepository.popFromWaitingQueue(leftSeat); // [member, score, member, score]
+  async activeQueues(): Promise<void> {
+    // N초당 Active로 전환시킬 M의 수
+    const m = 1000;
+    const results = await this.queueRedisRepository.popFromWaitingQueue(m);
     const values = results.filter((_, i) => (i + 1) % 2 == 1);
 
     if (0 < values.length) {

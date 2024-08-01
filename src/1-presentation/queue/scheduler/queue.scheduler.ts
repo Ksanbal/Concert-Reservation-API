@@ -7,10 +7,18 @@ export class QueueScheduler {
   constructor(private readonly queueFacade: QueueFacade) {}
 
   /**
-   * 대기열 처리 스케줄
+   * 만료된 토큰 삭제 스케줄
    */
   @Cron(CronExpression.EVERY_MINUTE)
-  async processQueue(): Promise<void> {
-    await this.queueFacade.processQueue();
+  async deleteExpiredQueues(): Promise<void> {
+    await this.queueFacade.deleteExpiredQueues();
+  }
+
+  /**
+   * 토큰 활성화 스케줄
+   */
+  @Cron(CronExpression.EVERY_10_SECONDS)
+  async activeQueues(): Promise<void> {
+    await this.queueFacade.activeQueues();
   }
 }

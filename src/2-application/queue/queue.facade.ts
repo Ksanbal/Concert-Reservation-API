@@ -39,13 +39,16 @@ export class QueueFacade {
   }
 
   /**
-   * 대기열 처리 스케줄
+   * 대기열 토큰 만료 처리 스케줄
    */
-  async processQueue(): Promise<void> {
-    // 대기열 토큰 만료 처리 스케줄
+  async deleteExpiredQueues() {
     await this.queueService.processExpiredQueue();
+  }
 
-    // 대기열 토큰 상태 및 만료시간 업데이트 스케줄
-    await this.queueService.processQueue();
+  /**
+   * 토큰 활성화 스케줄
+   */
+  async activeQueues() {
+    await this.queueService.activeQueues();
   }
 }
