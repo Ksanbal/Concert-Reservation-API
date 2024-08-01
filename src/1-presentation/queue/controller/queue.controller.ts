@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Post, Put } from '@nestjs/common';
 import { QueueCreateTokenReqDto } from './dto/request/queue.create-token.req.dto';
 import { QueueTokenResDto } from './dto/response/queue.token.res.dto';
 import {
@@ -9,9 +9,6 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { QueueFacade } from 'src/2-application/queue/queue.facade';
-import { QueueGuard } from 'src/libs/guards/queue/queue.guard';
-import { CurrentQueue } from 'src/libs/decorators/current-queue/current-queue.decorator';
-import { QueueModel } from 'src/3-domain/queue/queue.model';
 
 @ApiTags('Queue')
 @Controller('queue')
@@ -52,9 +49,10 @@ export class QueueController {
     },
   })
   @Put('token')
-  @UseGuards(QueueGuard)
-  async extend(@CurrentQueue() queue: QueueModel): Promise<QueueTokenResDto> {
-    const result = await this.queueFacade.extend({ queue });
+  async extend(
+    @Headers('authorization') token: string,
+  ): Promise<QueueTokenResDto> {
+    const result = await this.queueFacade.extend({ token });
     return result;
   }
 
@@ -74,11 +72,10 @@ export class QueueController {
     },
   })
   @Get('token/validate')
-  @UseGuards(QueueGuard)
   async validateToken(
-    @CurrentQueue() queue: QueueModel,
+    @Headers('authorization') token: string,
   ): Promise<QueueTokenResDto> {
-    const result = await this.queueFacade.get({ queue });
+    const result = await this.queueFacade.get({ token });
     return result;
   }
 }

@@ -106,7 +106,7 @@ export class QueueRepository {
 
   async delete(queue: QueueModel) {
     try {
-      await this.queueRepository.delete(queue.id);
+      await this.queueRepository.delete(queue);
     } catch (error) {
       return false;
     }

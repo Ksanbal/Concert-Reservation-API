@@ -1,11 +1,13 @@
-import { QueueModel } from './queue.model';
-
 export type QueueServiceCreateProps = {
   userId: number;
 };
 
 export type QueueServiceGetProps = {
-  queue: QueueModel;
+  token: string;
+};
+
+export type QueueServiceExtendGetProps = {
+  token: string;
 };
 
 export type QueueServiceGetWorkingProps = {

@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
 import { QueueModel } from 'src/3-domain/queue/queue.model';
 import {
   QueueServiceCreateProps,
+  QueueServiceExtendGetProps,
   QueueServiceGetProps,
 } from 'src/3-domain/queue/queue.props';
 import { QueueService } from 'src/3-domain/queue/queue.service';
@@ -28,20 +28,19 @@ export class QueueFacade {
    * 대기열 토큰 유효성 체크
    */
   async get(args: QueueServiceGetProps): Promise<QueueModel> {
-    return this.queueService.get(args);
+    return await this.queueService.get(args);
   }
 
   /**
    * 대기열 토큰 유효기간 연장
    */
-  async extend(args: QueueServiceGetProps): Promise<QueueModel> {
-    return this.queueService.extend(args.queue);
+  async extend(args: QueueServiceExtendGetProps): Promise<QueueModel> {
+    return this.queueService.extend(args.token);
   }
 
   /**
    * 대기열 처리 스케줄
    */
-  @Cron(CronExpression.EVERY_30_SECONDS)
   async processQueue(): Promise<void> {
     // 대기열 토큰 만료 처리 스케줄
     await this.queueService.processExpiredQueue();
