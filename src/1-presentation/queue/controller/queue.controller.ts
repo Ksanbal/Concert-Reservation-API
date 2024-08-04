@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Put, Headers } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Post, Put } from '@nestjs/common';
 import { QueueCreateTokenReqDto } from './dto/request/queue.create-token.req.dto';
 import { QueueTokenResDto } from './dto/response/queue.token.res.dto';
 import {

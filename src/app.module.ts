@@ -11,6 +11,7 @@ import { DatabaseModule } from './libs/database/database.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { LoggerContextMiddleware } from './libs/middleware/logger-context.middleware';
 import { MyRedisModule } from './libs/redis/redis.module';
+import { QueueGuardModule } from './libs/guards/queue/queue-guard.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { MyRedisModule } from './libs/redis/redis.module';
     ConcertsModule,
     ReservationsModule,
     MyRedisModule,
+    QueueGuardModule,
   ],
   controllers: [AppController],
   providers: [AppService, Logger],

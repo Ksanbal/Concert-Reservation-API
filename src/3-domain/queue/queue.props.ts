@@ -5,3 +5,11 @@ export type QueueServiceCreateProps = {
 export type QueueServiceGetProps = {
   token: string;
 };
+
+export type QueueServiceExtendGetProps = {
+  token: string;
+};
+
+export type QueueServiceGetWorkingProps = {
+  token: string;
+};

@@ -1,4 +1,4 @@
-import { Body, Controller, Headers, Post } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { PaymentsPayReqDto } from './dto/request/payments.pay.req.dto';
 import { PaymentsPayResDto } from './dto/response/payments.pay.res.dto';
 import {
@@ -10,9 +10,13 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { PaymentsFacade } from 'src/2-application/payments/payments.facade';
+import { QueueGuard } from 'src/libs/guards/queue/queue.guard';
+import { QueueModel } from 'src/3-domain/queue/queue.model';
+import { CurrentQueue } from 'src/libs/decorators/current-queue/current-queue.decorator';
 
 @ApiTags('Payments')
 @Controller('payments')
+@UseGuards(QueueGuard)
 export class PaymentsController {
   constructor(private readonly paymentsFacade: PaymentsFacade) {}
 
@@ -37,10 +41,10 @@ export class PaymentsController {
   })
   @Post()
   async pay(
-    @Headers('authorization') token: string,
+    @CurrentQueue() queue: QueueModel,
     @Body() body: PaymentsPayReqDto,
   ): Promise<PaymentsPayResDto> {
-    const result = await this.paymentsFacade.payReservation(token, body);
+    const result = await this.paymentsFacade.payReservation(queue, body);
     return PaymentsPayResDto.fromModel(result);
   }
 }

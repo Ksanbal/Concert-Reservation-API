@@ -1,6 +1,9 @@
-import { QueueRepository } from 'src/4-infrastructure/queue/queue.repository';
 import { QueueModel } from './queue.model';
-import { QueueServiceCreateProps, QueueServiceGetProps } from './queue.props';
+import {
+  QueueServiceCreateProps,
+  QueueServiceGetProps,
+  QueueServiceGetWorkingProps,
+} from './queue.props';
 import { QueueStatusEnum } from 'src/4-infrastructure/queue/entities/queue.entity';
 import * as dayjs from 'dayjs';
 import {
@@ -8,133 +11,176 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { DataSource } from 'typeorm';
 import Redlock from 'redlock';
 import Redis from 'ioredis';
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
+import { QueueRedisRepository } from 'src/4-infrastructure/queue/queue-redis.repository';
 
 @Injectable()
 export class QueueService {
   constructor(
-    private readonly queueRepository: QueueRepository,
-    private readonly dataSource: DataSource,
     @InjectRedis()
     private readonly redis: Redis,
+    private readonly queueRedisRepository: QueueRedisRepository,
   ) {}
+
+  /**
+   * Redis의 패턴을 이용해 queue 조회
+   * @param pattern uuid:userId:expiredAt 형식의 패턴
+   * @returns
+   */
+  private async getQueueByPattern(pattern: string): Promise<QueueModel | null> {
+    // ActiveQueue에서 조회
+    let queue =
+      await this.queueRedisRepository.findByPatternFromActiveQueue(pattern);
+    if (queue) return queue;
+
+    // WaitingQueue에서 조회
+    queue =
+      await this.queueRedisRepository.findByPatternFromWaitingQueue(pattern);
+
+    if (queue) {
+      const value = Buffer.from(queue.token, 'base64').toString();
+      queue.remain =
+        await this.queueRedisRepository.getRankByValueFromWaitingQueue(value);
+    }
+
+    return queue;
+  }
 
   async create(args: QueueServiceCreateProps): Promise<QueueModel> {
     const redlock = new Redlock([this.redis]);
     const lock = await redlock.acquire(['queue'], 2000);
 
-    const queue = await this.dataSource.transaction(async (entityManager) => {
-      let queue = await this.queueRepository.findByUserId(
-        entityManager,
+    let queue = await this.getQueueByPattern(`*:${args.userId}:*`);
+
+    if (!queue) {
+      const expiredAt = dayjs().add(10, 'minute').toDate(); // 10분 후
+
+      queue = await this.queueRedisRepository.createToWaitingQueue(
         args.userId,
+        new Date(),
+        expiredAt,
       );
 
-      if (!queue) {
-        const expiredAt = dayjs().add(10, 'minute').toDate(); // 10분 후
-
-        queue = await this.queueRepository.create(entityManager, {
-          userId: args.userId,
-          expiredAt,
-          status: QueueStatusEnum.WAIT,
-        });
-      }
-
-      return queue;
-    });
+      const value = Buffer.from(queue.token, 'base64').toString();
+      queue.remain =
+        await this.queueRedisRepository.getRankByValueFromWaitingQueue(value);
+    }
 
     await lock.release();
-
-    // 현재 working인 마지막 queue을 조회
-    const lastWorkingQueue = await this.queueRepository.findLastWorkingQueue();
-
-    if (lastWorkingQueue != null) {
-      queue.remain = queue.id - lastWorkingQueue.id;
-    }
 
     return queue;
   }
 
   async get(args: QueueServiceGetProps): Promise<QueueModel> {
-    const queue = await this.queueRepository.findByToken(args.token);
+    const pattern = Buffer.from(args.token, 'base64').toString();
+    const queue = await this.getQueueByPattern(pattern);
 
     if (!queue) {
       throw new NotFoundException('토큰이 존재하지 않습니다.');
     }
 
-    // 만료시간이 지났다면
-    if (
-      queue.status == QueueStatusEnum.EXPIRED ||
-      dayjs(queue.expiredAt).isBefore(dayjs())
-    ) {
+    if (queue.expiredAt < new Date()) {
       throw new ForbiddenException('이미 만료된 토큰입니다.');
-    }
-
-    // 현재 working인 마지막 queue을 조회
-    const lastWorkingQueue = await this.queueRepository.findLastWorkingQueue();
-    if (lastWorkingQueue != null) {
-      queue.remain = queue.id - lastWorkingQueue.id;
     }
 
     return queue;
   }
 
-  async extend(queue: QueueModel): Promise<QueueModel> {
-    queue.expiredAt = dayjs().add(10, 'minute').toDate(); // 현재부터 10분 연장
-
-    return this.queueRepository.update(queue);
-  }
-
-  async processQueue(): Promise<void> {
-    const workingQueueCount = await this.queueRepository.workingQueueCount();
-
-    // 정원 : 100명
-    if (100 <= workingQueueCount) {
-      return;
-    }
-
-    const leftSpace = 100 - workingQueueCount;
-
-    const waitingQueues =
-      await this.queueRepository.findWaitingQueues(leftSpace);
-
-    for (const queue of waitingQueues) {
-      queue.expiredAt = dayjs().add(20, 'minute').toDate(); // 20분 연장
-      queue.status = QueueStatusEnum.WORKING;
-    }
-
-    await this.queueRepository.bulkUpdate(waitingQueues);
-  }
-
-  async processExpiredQueue(): Promise<void> {
-    const expiredQueues = await this.queueRepository.findExpiredQueues();
-
-    for (const queue of expiredQueues) {
-      queue.status = QueueStatusEnum.EXPIRED;
-    }
-
-    await this.queueRepository.bulkUpdate(expiredQueues);
-  }
-
-  async getWorking(args: QueueServiceGetProps): Promise<QueueModel> {
-    const queue = await this.queueRepository.findByToken(args.token);
+  async extend(token: string): Promise<QueueModel> {
+    const value = Buffer.from(token, 'base64').toString();
+    const queue = await this.getQueueByPattern(value);
 
     if (!queue) {
       throw new NotFoundException('토큰이 존재하지 않습니다.');
     }
 
-    // 만료시간이 지났다면
-    if (
-      queue.status == QueueStatusEnum.EXPIRED ||
-      dayjs(queue.expiredAt).isBefore(dayjs())
-    ) {
-      throw new ForbiddenException('이미 만료된 토큰입니다.');
+    const newExpiredAt = dayjs().add(10, 'minute').toDate(); // 현재부터 10분 연장
+
+    let newQueue;
+    if (queue.status == QueueStatusEnum.WAIT) {
+      // WaitingQueue에서 삭제
+      await this.queueRedisRepository.deleteFromWaitingQueue(value);
+
+      // WaitingQueue에서 새로 생성
+      newQueue = await this.queueRedisRepository.createToWaitingQueue(
+        queue.userId,
+        queue.createdAt,
+        newExpiredAt,
+      );
+    } else if (queue.status == QueueStatusEnum.WORKING) {
+      // WorkingQueue에서 삭제
+      await this.queueRedisRepository.deleteFromActiveQueue(value);
+
+      // WorkingQueue에서 새로 생성
+      newQueue = await this.queueRedisRepository.createToActiveQueue(
+        queue.userId,
+        newExpiredAt,
+      );
     }
 
-    if (queue.status == QueueStatusEnum.WAIT) {
-      throw new ForbiddenException('대기 중인 토큰입니다.');
+    return newQueue;
+  }
+
+  async processExpiredQueue(): Promise<void> {
+    const now = new Date();
+
+    // WaitingQueue에서 만료된 데이터 삭제
+    const waitingQueues =
+      await this.queueRedisRepository.findAllFromWaitingQueue();
+
+    const expiredWaitingQueues = waitingQueues.filter((e) => {
+      const expiredAt = Number(e.split(':')[2]);
+      return expiredAt < now.getTime();
+    });
+
+    if (0 < expiredWaitingQueues.length) {
+      await this.queueRedisRepository.deleteByArrayFromWaitingQueue(
+        expiredWaitingQueues,
+      );
+    }
+
+    // ActiveQueue에서 만료된 데이터 삭제
+    const activeQueues =
+      await this.queueRedisRepository.findAllFromActiveQueue();
+
+    const expiredActiveQueues = activeQueues.filter((e) => {
+      const expiredAt = Number(e.split(':')[2]);
+      return expiredAt < now.getTime();
+    });
+
+    if (0 < expiredActiveQueues.length) {
+      await this.queueRedisRepository.deleteByArrayFromActiveQueue(
+        expiredActiveQueues,
+      );
+    }
+  }
+
+  async activeQueues(): Promise<void> {
+    // N초당 Active로 전환시킬 M의 수
+    const m = 1000;
+    const results = await this.queueRedisRepository.popFromWaitingQueue(m);
+    const values = results.filter((_, i) => (i + 1) % 2 == 1);
+
+    if (0 < values.length) {
+      // ActiveQueue로 이동
+      await this.queueRedisRepository.createToActiveQueueWithValue(values);
+    }
+  }
+
+  async getWorking(args: QueueServiceGetWorkingProps): Promise<QueueModel> {
+    const token = Buffer.from(args.token, 'base64').toString();
+    const queue =
+      await this.queueRedisRepository.findByPatternFromActiveQueue(token);
+
+    if (!queue) {
+      throw new NotFoundException('활성화된 토큰이 아닙니다.');
+    }
+
+    // 만료시간이 지났다면
+    if (dayjs(queue.expiredAt).isBefore(dayjs())) {
+      throw new ForbiddenException('이미 만료된 토큰입니다.');
     }
 
     return queue;
@@ -144,6 +190,7 @@ export class QueueService {
    * 해당 토큰을 만료처리합니다.
    */
   async expire(queue: QueueModel) {
-    await this.queueRepository.delete(queue);
+    const value = Buffer.from(queue.token, 'base64').toString();
+    await this.queueRedisRepository.deleteFromActiveQueue(value);
   }
 }

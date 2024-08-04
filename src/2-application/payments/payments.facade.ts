@@ -3,6 +3,7 @@ import { PaymentsPayReqDto } from 'src/1-presentation/payments/dto/request/payme
 import { ConcertsService } from 'src/3-domain/concerts/concerts.service';
 import { PaymentsModel } from 'src/3-domain/payments/payments.model';
 import { PaymentsService } from 'src/3-domain/payments/payments.service';
+import { QueueModel } from 'src/3-domain/queue/queue.model';
 import { QueueService } from 'src/3-domain/queue/queue.service';
 import { ReservationsService } from 'src/3-domain/reservations/reservations.service';
 import { UsersService } from 'src/3-domain/users/users.service';
@@ -20,12 +21,9 @@ export class PaymentsFacade {
   ) {}
 
   async payReservation(
-    token: string,
+    queue: QueueModel,
     dto: PaymentsPayReqDto,
   ): Promise<PaymentsModel> {
-    // 토큰 유효성 체크
-    const queue = await this.queueService.getWorking({ token });
-
     // 예약정보 조회
     const { reservationId } = dto;
     const reservation = await this.reservationsService.get(reservationId);

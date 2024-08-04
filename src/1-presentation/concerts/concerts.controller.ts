@@ -1,4 +1,10 @@
-import { Controller, Get, Headers, Param, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  UseGuards,
+} from '@nestjs/common';
 import { ConcertsResDto } from './dto/response/concerts.res.dto';
 import { ConcertsSeatsResDto } from './dto/response/concerts.seats.res.dto';
 import {
@@ -9,9 +15,11 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { ConcertsFacade } from 'src/2-application/concerts/concerts.facade';
+import { QueueGuard } from 'src/libs/guards/queue/queue.guard';
 
 @ApiTags('Concerts')
 @Controller('concerts')
+@UseGuards(QueueGuard)
 export class ConcertsController {
   constructor(private readonly concertsFacade: ConcertsFacade) {}
 
@@ -30,10 +38,8 @@ export class ConcertsController {
     },
   })
   @Get()
-  async list(
-    @Headers('Authorization') token: string,
-  ): Promise<ConcertsResDto[]> {
-    const result = await this.concertsFacade.getAvailableDates(token);
+  async list(): Promise<ConcertsResDto[]> {
+    const result = await this.concertsFacade.getAvailableDates();
     return result.map(ConcertsResDto.fromModel);
   }
 
@@ -53,10 +59,9 @@ export class ConcertsController {
   })
   @Get('schedules/:scheduleId/seats')
   async seats(
-    @Headers('Authorization') token: string,
     @Param('scheduleId', ParseIntPipe) scheduleId: number,
   ): Promise<ConcertsSeatsResDto[]> {
-    const result = await this.concertsFacade.getSeats(token, {
+    const result = await this.concertsFacade.getSeats({
       concertScheduleId: scheduleId,
     });
 
