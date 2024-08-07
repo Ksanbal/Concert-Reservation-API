@@ -2,7 +2,6 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common/pipes';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import * as fs from 'fs';
 import { AllExceptionFilter } from './libs/filters/all-exception/all-exception.filter';
 import { winstonLogger } from './libs/logger/logger.config';
 
@@ -25,7 +24,6 @@ async function bootstrap() {
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, document);
-  fs.writeFileSync('./swagger-spec.json', JSON.stringify(document, null, 2));
 
   // Global Http 예외처리 필터
   app.useGlobalFilters(new AllExceptionFilter());
