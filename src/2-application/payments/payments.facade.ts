@@ -1,23 +1,23 @@
 import { ConflictException, Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PaymentsPayReqDto } from 'src/1-presentation/payments/dto/request/payments.pay.req.dto';
-import { ConcertsService } from 'src/3-domain/concerts/concerts.service';
 import { PaymentsModel } from 'src/3-domain/payments/payments.model';
 import { PaymentsService } from 'src/3-domain/payments/payments.service';
 import { QueueModel } from 'src/3-domain/queue/queue.model';
-import { QueueService } from 'src/3-domain/queue/queue.service';
 import { ReservationsService } from 'src/3-domain/reservations/reservations.service';
 import { UsersService } from 'src/3-domain/users/users.service';
+import { PaymentsPaiedEvent } from 'src/events/event';
 import { DataSource, EntityManager } from 'typeorm';
+import { log } from 'winston';
 
 @Injectable()
 export class PaymentsFacade {
   constructor(
-    private readonly queueService: QueueService,
     private readonly reservationsService: ReservationsService,
     private readonly usersService: UsersService,
-    private readonly concertsService: ConcertsService,
     private readonly paymentsService: PaymentsService,
     private readonly dataSource: DataSource,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async payReservation(
@@ -40,18 +40,6 @@ export class PaymentsFacade {
           reservation.concertMetaData.concertSeatPrice,
         );
 
-        // 예약상태를 결제로 변경
-        await this.reservationsService.payReservation(
-          entityManager,
-          reservation,
-        );
-
-        // 예약 좌석의 상태를 결제로 변경
-        await this.concertsService.paySeat(
-          entityManager,
-          reservation.concertMetaData.concertSeatId,
-        );
-
         // 결제 내역 생성
         payment = await this.paymentsService.create(
           entityManager,
@@ -60,12 +48,15 @@ export class PaymentsFacade {
         );
       })
       .catch((error) => {
-        console.error('', error);
+        log('error', '결제 처리 중 트랜잭션 오류', error);
         throw new ConflictException(error);
       });
 
-    // 사용자 토큰 삭제
-    await this.queueService.expire(queue);
+    // 결제 완료 이벤트 발행
+    this.eventEmitter.emitAsync(
+      PaymentsPaiedEvent.EVENT_NAME,
+      new PaymentsPaiedEvent(queue, payment, reservation),
+    );
 
     // 결제 정보 반환
     return payment;

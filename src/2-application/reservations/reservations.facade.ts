@@ -1,9 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { ConcertsService } from 'src/3-domain/concerts/concerts.service';
 import { ReservationsService } from 'src/3-domain/reservations/reservations.service';
 import { ReservationsFacadeCreateProps } from './reservations.facade-props';
 import { DataSource, EntityManager } from 'typeorm';
 import { QueueModel } from 'src/3-domain/queue/queue.model';
+import { log } from 'winston';
+import { PaymentsPaiedEvent } from 'src/events/event';
 
 @Injectable()
 export class ReservationsFacade {
@@ -61,5 +63,31 @@ export class ReservationsFacade {
     } catch (error) {
       console.error('공연 좌석 예약 반환 스케줄 중 트랜잭션 오류');
     }
+  }
+
+  /**
+   * 예약 결제처리
+   */
+  async payReservation(event: PaymentsPaiedEvent) {
+    const { reservation } = event;
+
+    await this.dataSource
+      .transaction(async (entityManager: EntityManager) => {
+        // 예약상태를 결제로 변경
+        await this.reservationsService.payReservation(
+          entityManager,
+          reservation,
+        );
+
+        // 예약 좌석의 상태를 결제로 변경
+        await this.concertsService.paySeat(
+          entityManager,
+          reservation.concertMetaData.concertSeatId,
+        );
+      })
+      .catch((error) => {
+        log('error', '예약 결제처리 중 트랜잭션 오류', error);
+        throw new ConflictException(error);
+      });
   }
 }
