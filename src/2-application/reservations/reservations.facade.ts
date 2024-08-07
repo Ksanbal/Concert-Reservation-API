@@ -23,6 +23,7 @@ export class ReservationsFacade {
     // 공연 meta data 생성
     const concertMetaData = await this.concertsService.createMetaData(
       args.scheduleId,
+      args.seatId,
     );
 
     // 좌석 예약 정보 생성

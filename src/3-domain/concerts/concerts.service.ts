@@ -71,15 +71,18 @@ export class ConcertsService {
   }
 
   // 공연 meta data 생성
-  async createMetaData(scheduleId: number): Promise<ConcertMetaDataModel> {
+  async createMetaData(
+    scheduleId: number,
+    seatId: number,
+  ): Promise<ConcertMetaDataModel> {
     // 공연 스케줄 조회
     const concertSchedule = await this.repository.findScheduleById(scheduleId);
 
     // 공연 조회
-    const concert = await this.repository.findById(concertSchedule.id);
+    const concert = await this.repository.findById(concertSchedule.concertId);
 
     // 공연 좌석 조회
-    const concertSeat = await this.repository.findSeatById(concertSchedule.id);
+    const concertSeat = await this.repository.findSeatById(seatId);
 
     // 공연 메타 데이터 생성
     return this.repository.createMetaData({
