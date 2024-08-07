@@ -6,7 +6,7 @@ import { PaymentsService } from 'src/3-domain/payments/payments.service';
 import { QueueModel } from 'src/3-domain/queue/queue.model';
 import { ReservationsService } from 'src/3-domain/reservations/reservations.service';
 import { UsersService } from 'src/3-domain/users/users.service';
-import { PaymentsPaiedEvent } from 'src/events/event';
+import { PaymentsPaiedErrorEvent, PaymentsPaiedEvent } from 'src/events/event';
 import { DataSource, EntityManager } from 'typeorm';
 import { log } from 'winston';
 
@@ -60,5 +60,29 @@ export class PaymentsFacade {
 
     // 결제 정보 반환
     return payment;
+  }
+
+  /**
+   * 결제 실패시 결제 정보 롤백
+   */
+  async rollbackPayment(event: PaymentsPaiedErrorEvent) {
+    const { payment, reservation } = event;
+
+    await this.dataSource
+      .transaction(async (entityManager: EntityManager) => {
+        // 사용자 포인트 환불
+        await this.usersService.refund(
+          entityManager,
+          payment.userId,
+          reservation.concertMetaData.concertSeatPrice,
+        );
+
+        // 결제 내역 삭제
+        await this.paymentsService.delete(entityManager, payment);
+      })
+      .catch((error) => {
+        log('error', '결제 롤백 중 트랜잭션 오류', error);
+        throw new ConflictException(error);
+      });
   }
 }

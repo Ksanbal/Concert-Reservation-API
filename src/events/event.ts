@@ -12,3 +12,14 @@ export class PaymentsPaiedEvent {
     public reservation: ReservationsModel,
   ) {}
 }
+
+// 결제 실패 이벤트
+export class PaymentsPaiedErrorEvent {
+  static EVENT_NAME = 'payments.paied-error';
+
+  constructor(
+    public queue: QueueModel,
+    public payment: PaymentsModel,
+    public reservation: ReservationsModel,
+  ) {}
+}
