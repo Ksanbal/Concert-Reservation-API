@@ -728,6 +728,210 @@ reservation ||--|| payment: one2one
 
 
 # 수행되는 쿼리 수집과 인덱스를 통한 성능개선
+<details>
+<summary>접기/펼치기</summary>
+
+### Users
+- 포인트 조회
+```sql
+-- user의 point 정보 조회
+SELECT * FROM "point" WHERE "user_id" = $1 LIMIT 1
+```
+- 포인트 충전
+```sql
+START TRANSACTION
+-- pessimistic_write으로 user의 point 조회
+SELECT * FROM "point" WHERE "user_id" = $1 LIMIT 1 FOR UPDATE
+-- 사용된 amount를 저장
+UPDATE "point" SET "id" = $1, "user_id" = $2, "amount" = $3, "updated_at" = CURRENT_TIMESTAMP WHERE "id" IN ($4)
+COMMIT
+```
+### Concerts
+- 예약 가능한 공연 날짜 조회
+```sql
+-- 공연 목록 조회
+SELECT * FROM "concert"
+-- 해당 공연의 예매가 가능한 스케줄 목록 조회
+SELECT * FROM "concert_schedule" WHERE "concert_id" IN ($1, $2) AND "ticket_open_at" <= $3 AND $4 < "ticket_close_at"
+```
+
+- 공연 좌석 조회
+```sql
+-- 공연 스케줄 조회
+SELECT * FROM "concert_schedule" WHERE "id" = $1 LIMIT 1
+-- 해당 스케줄의 좌석 전체 조회
+SELECT * FROM "concert_seat" WHERE "concert_schedule_id" = $1
+```
+### Reservations
+- 예약
+```sql
+START TRANSACTION
+-- pessimistic_write으로 좌석 조회
+SELECT * FROM "concert_seat" WHERE "id" = $1 FOR UPDATE 
+-- 해당 공연의 상태를 에약으로 변경
+UPDATE "concert_seat" SET "status" = $1 WHERE "id"  = $2
+COMMIT
+
+-- 스케줄의 잔여좌석 수 업데이트를 위해 조회
+SELECT * FROM "concert_schedule" WHERE "id" = $1 LIMIT 1 
+-- 스케줄의 잔여좌석 수 업데이트
+UPDATE "concert_schedule" SET "left_seat" = $1 WHERE "id" = $2
+
+-- 공연 메타 데이터 생성을 위해 조회
+SELECT * FROM "concert_schedule" WHERE "id" = $1 LIMIT 1 
+SELECT * FROM "concert" WHERE "id" = $1 LIMIT 1 
+SELECT * FROM "concert_seat" "ConcertSeatEntity" WHERE "id" = $1 LIMIT 1 
+
+-- 공연 메타 데이터 생성
+START TRANSACTION
+INSERT INTO "concert_meta_data"("concert_id", "concert_name", "concert_schedule_id", "concert_schedule_date", "concert_seat_id", "concert_seat_number", "concert_seat_price") VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING "id"
+COMMIT
+
+-- 예약 정보 생성
+START TRANSACTION
+INSERT INTO "reservation"("created_at", "updated_at", "expired_at", "user_id", "status", "concert_meta_data_id") VALUES (DEFAULT, DEFAULT, $1, $2, $3, $4) RETURNING "id", "created_at", "updated_at"
+COMMIT
+```
+### Payments
+- 예약 결제
+```sql
+-- 유효한 예약인지 확인하기 위해서 조회
+SELECT * FROM "reservation" WHERE "id" = $1 LIMIT 1
+-- 예약의 메타 데이터 조회
+SELECT * FROM "concert_meta_data" WHERE "id" = $1 LIMIT 1
+
+START TRANSACTION
+-- 사용자의 포인트를 차감하기 위해 pessimistic_write으로 조회
+SELECT * FROM "point" WHERE "user_id" = $1 LIMIT 1 FOR UPDATE
+UPDATE "point" SET "id" = $1, "user_id" = $2, "amount" = $3, "updated_at" = CURRENT_TIMESTAMP WHERE "id" IN ($4)
+-- 포인트 사용내역을 생성
+INSERT INTO "point_history"("created_at", "user_id", "amount", "type") VALUES (DEFAULT, $1, $2, $3) RETURNING "id", "created_at"
+-- 예약의 상태를 paied로 변경
+UPDATE "reservation" SET "status" = $1, "updated_at" = CURRENT_TIMESTAMP WHERE "id" IN ($2)
+-- 공연 좌석의 상태를 soldout으로 변경
+UPDATE "concert_seat" SET "status" = $1 WHERE "id" IN ($2)
+-- 결제 정보 생성
+INSERT INTO "payment"("created_at", "reservation_id", "user_id") VALUES (DEFAULT, $1, $2) RETURNING "id", "created_at"
+COMMIT
+```
+</details>
+
+### 요청할 쿼리
+```sql
+-- 해당 공연의 예매가 가능한 스케줄 목록 조회
+SELECT * FROM "concert_schedule" WHERE "concert_id" IN ($1, $2) AND "ticket_open_at" <= $3 AND $4 < "ticket_close_at"
+
+--- 예약 가능한 공연만 불러오도록 join
+EXPLAIN ANALYZE
+SELECT
+	c.id AS concert_id,
+	c.name AS concert_name,
+	json_agg(
+		json_build_object(
+			'id', cs.id, 
+			'date', cs.date, 
+			'ticket_open_at', cs.ticket_open_at, 
+			'ticket_close_at', cs.ticket_close_at, 
+			'left_seat', cs.left_seat
+		)
+	) AS schedules
+FROM
+	concert AS c
+	LEFT JOIN concert_schedule AS cs ON cs.concert_id = c.id
+WHERE
+	cs.ticket_open_at <= '2024-08-09'
+	AND '2024-08-09' < cs.ticket_close_at
+GROUP BY
+	c.id,
+	c.name;
+```
+
+### Test 환경
+- Mac M2 24GB
+- concert 테이블 rows : 2,107,986
+- concert_schedule 테이블 rows : 6,127,076
+- concert 1개당 concert_schedule 1~5개씩 적용해서 카디널리티를 높게 설정
+
+### Index 적용전
+```sql
+GroupAggregate  (cost=231574.94..438329.98 rows=1515061 width=53) (actual time=276.608..418.593 rows=59920 loops=1)
+  Group Key: c.id
+  ->  Gather Merge  (cost=231574.94..408028.76 rows=1515061 width=53) (actual time=276.556..293.918 rows=102063 loops=1)
+        Workers Planned: 2
+        Workers Launched: 2
+        ->  Sort  (cost=230574.92..232153.11 rows=631275 width=53) (actual time=259.831..261.428 rows=34021 loops=3)
+              Sort Key: c.id
+              Sort Method: quicksort  Memory: 3328kB
+              Worker 0:  Sort Method: quicksort  Memory: 3857kB
+              Worker 1:  Sort Method: external merge  Disk: 2584kB
+              ->  Parallel Hash Join  (cost=38596.81..148180.67 rows=631275 width=53) (actual time=222.664..254.079 rows=34021 loops=3)
+                    Hash Cond: (cs.concert_id = c.id)
+                    ->  Parallel Seq Scan on concert_schedule cs  (cost=0.00..92882.77 rows=631275 width=36) (actual time=19.971..88.827 rows=34021 loops=3)
+"                          Filter: ((ticket_open_at <= '2024-08-09 00:00:00'::timestamp without time zone) AND ('2024-08-09 00:00:00'::timestamp without time zone < ticket_close_at))"
+                          Rows Removed by Filter: 2088552
+                    ->  Parallel Hash  (cost=22367.47..22367.47 rows=883947 width=21) (actual time=123.050..123.050 rows=707523 loops=3)
+                          Buckets: 131072  Batches: 32  Memory Usage: 4704kB
+                          ->  Parallel Seq Scan on concert c  (cost=0.00..22367.47 rows=883947 width=21) (actual time=0.024..46.242 rows=707523 loops=3)
+Planning Time: 0.656 ms
+JIT:
+  Functions: 39
+  Options: Inlining false, Optimization false, Expressions true, Deforming true
+  Timing: Generation 2.653 ms, Inlining 0.000 ms, Optimization 1.530 ms, Emission 30.404 ms, Total 34.587 ms
+Execution Time: 421.568 ms
+```
+### Index 적용 후
+#### `@Index(['concertId'])`
+```sql
+GroupAggregate  (cost=13.60..344082.46 rows=1514851 width=53) (actual time=204.256..1266.483 rows=59920 loops=1)
+  Group Key: c.id
+  ->  Merge Join  (cost=13.60..313785.44 rows=1514851 width=53) (actual time=204.224..1134.455 rows=102063 loops=1)
+        Merge Cond: (c.id = cs.concert_id)
+"        ->  Index Scan using ""PK_c96bfb33ee9a95525a3f5269d1f"" on concert c  (cost=0.43..68648.83 rows=2121473 width=21) (actual time=0.012..309.503 rows=2122568 loops=1)"
+"        ->  Index Scan using ""IDX_71925060d6beea8f2c47ccc55f"" on concert_schedule cs  (cost=0.43..231495.18 rows=1514851 width=36) (actual time=136.819..718.581 rows=102064 loops=1)"
+"              Filter: ((ticket_open_at <= '2024-08-09 00:00:00'::timestamp without time zone) AND ('2024-08-09 00:00:00'::timestamp without time zone < ticket_close_at))"
+              Rows Removed by Filter: 6265651
+Planning Time: 0.603 ms
+JIT:
+  Functions: 12
+  Options: Inlining false, Optimization false, Expressions true, Deforming true
+  Timing: Generation 1.783 ms, Inlining 0.000 ms, Optimization 0.453 ms, Emission 9.652 ms, Total 11.889 ms
+Execution Time: 1269.795 ms
+```
+#### `@Index(['concertId', 'ticketOpenAt'])`
+```sql
+GroupAggregate  (cost=17.28..408986.11 rows=1514851 width=53) (actual time=176.811..1108.005 rows=59920 loops=1)
+  Group Key: c.id
+  ->  Merge Join  (cost=17.28..378689.09 rows=1514851 width=53) (actual time=176.779..976.979 rows=102063 loops=1)
+        Merge Cond: (c.id = cs.concert_id)
+"        ->  Index Scan using ""PK_c96bfb33ee9a95525a3f5269d1f"" on concert c  (cost=0.43..68648.83 rows=2121473 width=21) (actual time=0.025..307.517 rows=2122568 loops=1)"
+"        ->  Index Scan using ""IDX_996be3ab1528fabf37221c9ac7"" on concert_schedule cs  (cost=0.43..299460.20 rows=1514851 width=36) (actual time=106.822..563.610 rows=102064 loops=1)"
+"              Index Cond: (ticket_open_at <= '2024-08-09 00:00:00'::timestamp without time zone)"
+"              Filter: ('2024-08-09 00:00:00'::timestamp without time zone < ticket_close_at)"
+              Rows Removed by Filter: 4020833
+Planning Time: 0.797 ms
+JIT:
+  Functions: 14
+  Options: Inlining false, Optimization false, Expressions true, Deforming true
+  Timing: Generation 1.612 ms, Inlining 0.000 ms, Optimization 0.716 ms, Emission 11.267 ms, Total 13.596 ms
+Execution Time: 1111.131 ms
+```
+#### `@Index(['concertId', 'ticketOpenAt', 'ticketCloseAt'])`
+```sql
+GroupAggregate  (cost=16.86..401596.38 rows=1514851 width=53) (actual time=94.731..788.253 rows=59920 loops=1)
+  Group Key: c.id
+  ->  Merge Join  (cost=16.86..371299.36 rows=1514851 width=53) (actual time=94.706..658.382 rows=102063 loops=1)
+        Merge Cond: (c.id = cs.concert_id)
+"        ->  Index Scan using ""PK_c96bfb33ee9a95525a3f5269d1f"" on concert c  (cost=0.43..68648.83 rows=2121473 width=21) (actual time=0.010..321.743 rows=2122568 loops=1)"
+"        ->  Index Scan using ""IDX_2e3196fb484c72aa1655073b2d"" on concert_schedule cs  (cost=0.43..291721.92 rows=1514851 width=36) (actual time=19.505..225.619 rows=102064 loops=1)"
+"              Index Cond: ((ticket_open_at <= '2024-08-09 00:00:00'::timestamp without time zone) AND (ticket_close_at > '2024-08-09 00:00:00'::timestamp without time zone))"
+Planning Time: 0.208 ms
+JIT:
+  Functions: 12
+  Options: Inlining false, Optimization false, Expressions true, Deforming true
+  Timing: Generation 0.790 ms, Inlining 0.000 ms, Optimization 0.390 ms, Emission 5.129 ms, Total 6.309 ms
+Execution Time: 790.640 ms
+```
+
 
 # 트랜잭션 범위의 이해와 MSA로 분리시 트랜잭션 처리의 한계와 해결방안
 기존 설계에서는 각 Facade에서 여러 service를 호출해서 사용해서 사용 중이기 때문에, 기능이 추가되었을때 트랜잭션의 범위가 커질 수있다.
