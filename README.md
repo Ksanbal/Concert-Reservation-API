@@ -729,7 +729,7 @@ reservation ||--|| payment: one2one
 
 # 수행되는 쿼리 수집과 인덱스를 통한 성능개선
 <details>
-<summary>접기/펼치기</summary>
+<summary>현재 수행되는 쿼리 목록</summary>
 
 ### Users
 - 포인트 조회
