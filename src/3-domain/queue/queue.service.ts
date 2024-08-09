@@ -193,4 +193,12 @@ export class QueueService {
     const value = Buffer.from(queue.token, 'base64').toString();
     await this.queueRedisRepository.deleteFromActiveQueue(value);
   }
+
+  /**
+   * ActiveQueue에 토큰 추가
+   */
+  async addActiveQueue(queue: QueueModel) {
+    const value = Buffer.from(queue.token, 'base64').toString();
+    await this.queueRedisRepository.createToActiveQueueWithValue([value]);
+  }
 }

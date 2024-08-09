@@ -21,6 +21,7 @@ import { PointEntity } from 'src/4-infrastructure/users/entities/point.entity';
 import { ConcertEntity } from 'src/4-infrastructure/concerts/entities/concert.entity';
 import { ConcertSeatEntity } from 'src/4-infrastructure/concerts/entities/concert-seat.entity';
 import { ConcertScheduleEntity } from 'src/4-infrastructure/concerts/entities/concert-schedule.entity';
+import { PaymentsListener } from './listener/payments.listener';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { ConcertScheduleEntity } from 'src/4-infrastructure/concerts/entities/co
   ],
   controllers: [PaymentsController],
   providers: [
+    PaymentsListener,
     PaymentsFacade,
     PaymentsService,
     PaymentsRepository,

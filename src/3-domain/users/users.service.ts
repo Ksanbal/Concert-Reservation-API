@@ -75,4 +75,19 @@ export class UsersService {
 
     return await this.usersRepository.updatePoint(entityManage, point);
   }
+
+  // 포인트 환불 (기록을 사용하는 경우 refund로 처리하기 위해서 작성)
+  async refund(entityManage: EntityManager, userId: number, amount: number) {
+    const point = await this.usersRepository.findWithPointById(
+      entityManage,
+      userId,
+    );
+    if (!point) {
+      throw new NotFoundException('포인트 정보를 찾을 수 없습니다.');
+    }
+
+    point.amount += amount;
+
+    return await this.usersRepository.updatePoint(entityManage, point);
+  }
 }

@@ -7,6 +7,7 @@ import {
 } from 'src/3-domain/queue/queue.props';
 import { QueueService } from 'src/3-domain/queue/queue.service';
 import { UsersService } from 'src/3-domain/users/users.service';
+import { PaymentsPaiedErrorEvent, PaymentsPaiedEvent } from 'src/events/event';
 
 @Injectable()
 export class QueueFacade {
@@ -50,5 +51,21 @@ export class QueueFacade {
    */
   async activeQueues() {
     await this.queueService.activeQueues();
+  }
+
+  /**
+   * 토큰 비활성화
+   */
+  async expire(event: PaymentsPaiedEvent) {
+    const { queue } = event;
+    await this.queueService.expire(queue);
+  }
+
+  /**
+   * 토큰 롤백
+   */
+  async rollbackExpire(event: PaymentsPaiedErrorEvent) {
+    const { queue } = event;
+    await this.queueService.addActiveQueue(queue);
   }
 }

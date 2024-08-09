@@ -14,6 +14,7 @@ import { QueueEntity } from 'src/4-infrastructure/queue/entities/queue.entity';
 import { ConcertEntity } from 'src/4-infrastructure/concerts/entities/concert.entity';
 import { ConcertScheduleEntity } from 'src/4-infrastructure/concerts/entities/concert-schedule.entity';
 import { ConcertSeatEntity } from 'src/4-infrastructure/concerts/entities/concert-seat.entity';
+import { ReservationsListener } from './listener/reservations.listener';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { ConcertSeatEntity } from 'src/4-infrastructure/concerts/entities/concer
   ],
   controllers: [ReservationsController],
   providers: [
+    ReservationsListener,
     ReservationsFacade,
     ReservationsService,
     ReservationsRepository,
