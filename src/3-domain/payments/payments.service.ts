@@ -23,4 +23,9 @@ export class PaymentsService {
 
     return payment;
   }
+
+  // 결제 정보 삭제
+  async delete(entityManager: EntityManager, payment: PaymentsModel) {
+    await this.repository.deleteById(entityManager, payment.id);
+  }
 }

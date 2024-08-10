@@ -19,4 +19,9 @@ export class PaymentsRepository {
       return null;
     }
   }
+
+  // id로 결제 정보 삭제
+  async deleteById(entityManager: EntityManager, id: number) {
+    await entityManager.delete(PaymentEntity, id);
+  }
 }

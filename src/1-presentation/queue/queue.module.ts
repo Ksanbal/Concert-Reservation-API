@@ -11,12 +11,14 @@ import { UserEntity } from 'src/4-infrastructure/users/entities/user.entity';
 import { PointEntity } from 'src/4-infrastructure/users/entities/point.entity';
 import { QueueRedisRepository } from 'src/4-infrastructure/queue/queue-redis.repository';
 import { QueueScheduler } from './scheduler/queue.scheduler';
+import { QueueListener } from './listener/queue.listener';
 
 @Module({
   imports: [TypeOrmModule.forFeature([QueueEntity, UserEntity, PointEntity])],
   controllers: [QueueController],
   providers: [
     QueueScheduler,
+    QueueListener,
     QueueFacade,
     QueueService,
     QueueRepository,

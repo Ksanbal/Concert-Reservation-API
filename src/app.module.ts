@@ -12,6 +12,8 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { LoggerContextMiddleware } from './libs/middleware/logger-context.middleware';
 import { MyRedisModule } from './libs/redis/redis.module';
 import { QueueGuardModule } from './libs/guards/queue/queue-guard.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { NotificationsModule } from './1-presentation/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -21,6 +23,7 @@ import { QueueGuardModule } from './libs/guards/queue/queue-guard.module';
     }),
     DatabaseModule,
     ScheduleModule.forRoot(),
+    EventEmitterModule.forRoot(),
     QueueModule,
     UsersModule,
     PaymentsModule,
@@ -28,6 +31,7 @@ import { QueueGuardModule } from './libs/guards/queue/queue-guard.module';
     ReservationsModule,
     MyRedisModule,
     QueueGuardModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService, Logger],
