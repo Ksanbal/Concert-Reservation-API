@@ -14,7 +14,9 @@ import { QueueEntity } from 'src/4-infrastructure/queue/entities/queue.entity';
 import { ConcertEntity } from 'src/4-infrastructure/concerts/entities/concert.entity';
 import { ConcertScheduleEntity } from 'src/4-infrastructure/concerts/entities/concert-schedule.entity';
 import { ConcertSeatEntity } from 'src/4-infrastructure/concerts/entities/concert-seat.entity';
-import { ReservationsListener } from './listener/reservations.listener';
+import { ConsumerService } from 'src/libs/message-broker/consumer.service';
+import { ReservationsEvent } from 'src/events/reservations/reservations.event';
+import { ProducerService } from 'src/libs/message-broker/producer.service';
 
 @Module({
   imports: [
@@ -29,7 +31,6 @@ import { ReservationsListener } from './listener/reservations.listener';
   ],
   controllers: [ReservationsController],
   providers: [
-    ReservationsListener,
     ReservationsFacade,
     ReservationsService,
     ReservationsRepository,
@@ -37,6 +38,9 @@ import { ReservationsListener } from './listener/reservations.listener';
     QueueRepository,
     ConcertsService,
     ConcertsRepository,
+    ConsumerService,
+    ReservationsEvent,
+    ProducerService,
   ],
 })
 export class ReservationsModule {}

@@ -1,12 +1,16 @@
 import { ConflictException, Injectable } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PaymentsPayReqDto } from 'src/1-presentation/payments/dto/request/payments.pay.req.dto';
 import { PaymentsModel } from 'src/3-domain/payments/payments.model';
 import { PaymentsService } from 'src/3-domain/payments/payments.service';
 import { QueueModel } from 'src/3-domain/queue/queue.model';
 import { ReservationsService } from 'src/3-domain/reservations/reservations.service';
 import { UsersService } from 'src/3-domain/users/users.service';
-import { PaymentsPaiedErrorEvent, PaymentsPaiedEvent } from 'src/events/event';
+import {
+  PaymentsPaiedErrorEventDto,
+  PaymentsPaiedEvenDto,
+} from 'src/events/payments/dto/payments.event.dto';
+
+import { ProducerService } from 'src/libs/message-broker/producer.service';
 import { DataSource, EntityManager } from 'typeorm';
 import { log } from 'winston';
 
@@ -17,7 +21,7 @@ export class PaymentsFacade {
     private readonly usersService: UsersService,
     private readonly paymentsService: PaymentsService,
     private readonly dataSource: DataSource,
-    private readonly eventEmitter: EventEmitter2,
+    private readonly producerServcie: ProducerService,
   ) {}
 
   async payReservation(
@@ -53,10 +57,18 @@ export class PaymentsFacade {
       });
 
     // 결제 완료 이벤트 발행
-    this.eventEmitter.emitAsync(
-      PaymentsPaiedEvent.EVENT_NAME,
-      new PaymentsPaiedEvent(queue, payment, reservation),
-    );
+    // 결제 완료 이벤트 발행
+    this.producerServcie.produce({
+      topic: PaymentsPaiedEvenDto.EVENT_NAME,
+      messages: [
+        {
+          key: payment.id.toString(),
+          value: JSON.stringify(
+            new PaymentsPaiedEvenDto(queue, payment, reservation),
+          ),
+        },
+      ],
+    });
 
     // 결제 정보 반환
     return payment;
@@ -65,7 +77,7 @@ export class PaymentsFacade {
   /**
    * 결제 실패시 결제 정보 롤백
    */
-  async rollbackPayment(event: PaymentsPaiedErrorEvent) {
+  async rollbackPayment(event: PaymentsPaiedErrorEventDto) {
     const { payment, reservation } = event;
 
     await this.dataSource
