@@ -24,6 +24,7 @@ import { ConcertScheduleEntity } from 'src/4-infrastructure/concerts/entities/co
 import { ProducerService } from 'src/libs/message-broker/producer.service';
 import { PaymentsEvent } from 'src/events/payments/payments.event';
 import { ConsumerService } from 'src/libs/message-broker/consumer.service';
+import { PaymentsOutboxEvent } from 'src/events/payments/payments-outbox.event';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { ConsumerService } from 'src/libs/message-broker/consumer.service';
     ProducerService,
     ConsumerService,
     PaymentsEvent,
+    PaymentsOutboxEvent,
   ],
 })
 export class PaymentsModule {}

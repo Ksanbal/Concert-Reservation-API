@@ -50,13 +50,22 @@ export class PaymentsFacade {
           reservation.id,
           reservation.userId,
         );
+
+        // 결제 outbox 생성
+        await this.paymentsService.createOutbox(entityManager, {
+          payment,
+          topic: PaymentsPaiedEvenDto.EVENT_NAME,
+          key: payment.id.toString(),
+          value: JSON.stringify(
+            new PaymentsPaiedEvenDto(queue, payment, reservation),
+          ),
+        });
       })
       .catch((error) => {
         log('error', '결제 처리 중 트랜잭션 오류', error);
         throw new ConflictException(error);
       });
 
-    // 결제 완료 이벤트 발행
     // 결제 완료 이벤트 발행
     this.producerServcie.produce({
       topic: PaymentsPaiedEvenDto.EVENT_NAME,
