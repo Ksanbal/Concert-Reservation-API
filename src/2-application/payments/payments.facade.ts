@@ -106,4 +106,23 @@ export class PaymentsFacade {
         throw new ConflictException(error);
       });
   }
+
+  /**
+   * 발행 실패한 결제 outbox 재발행
+   */
+  async publishOutbox() {
+    // 미발행 outbox 조회
+    const outboxes = await this.paymentsService.getUnpublishedOutboxs();
+
+    if (0 < outboxes.length) {
+      // outbox 재발행
+      this.producerServcie.produce({
+        topic: outboxes[0].topic,
+        messages: outboxes.map((outbox) => ({
+          key: outbox.key,
+          value: outbox.value,
+        })),
+      });
+    }
+  }
 }

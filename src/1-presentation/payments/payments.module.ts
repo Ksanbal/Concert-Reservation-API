@@ -25,6 +25,7 @@ import { ProducerService } from 'src/libs/message-broker/producer.service';
 import { PaymentsEvent } from 'src/events/payments/payments.event';
 import { ConsumerService } from 'src/libs/message-broker/consumer.service';
 import { PaymentsOutboxEvent } from 'src/events/payments/payments-outbox.event';
+import { PaymentsScheduler } from './scheduler/payments.scheduler';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { PaymentsOutboxEvent } from 'src/events/payments/payments-outbox.event';
   ],
   controllers: [PaymentsController],
   providers: [
+    PaymentsScheduler,
     PaymentsFacade,
     PaymentsService,
     PaymentsRepository,

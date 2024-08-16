@@ -50,4 +50,16 @@ export class PaymentsRepository {
       .set({ status })
       .execute();
   }
+
+  // 미발행 outbox 조회
+  async findAllUnpublishedOutboxs(
+    before: Date,
+  ): Promise<PaymentOutboxEntity[]> {
+    return this.dataSource
+      .getRepository(PaymentOutboxEntity)
+      .createQueryBuilder('outbox')
+      .where('outbox.status = :status', { status: OutboxStatusEnum.INIT })
+      .andWhere('outbox.updatedAt < :before', { before })
+      .getMany();
+  }
 }

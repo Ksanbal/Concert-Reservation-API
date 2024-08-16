@@ -5,6 +5,7 @@ import { PaymentsRepository } from 'src/4-infrastructure/payments/payments.repos
 import { PaymentsServiceCreateOutboxDto } from './dto/payments.service.dto';
 import { PaymentsPaiedEvenDto } from 'src/events/payments/dto/payments.event.dto';
 import { OutboxStatusEnum } from 'src/libs/database/common/outbox.entity';
+import * as dayjs from 'dayjs';
 
 @Injectable()
 export class PaymentsService {
@@ -50,5 +51,12 @@ export class PaymentsService {
       event.payment.id,
       OutboxStatusEnum.PUBLISHED,
     );
+  }
+
+  // 미발행 outbox 조회
+  async getUnpublishedOutboxs() {
+    // 현재로부터 1분전 시간
+    const oneMinuteAgo = dayjs().subtract(1, 'minute').toDate();
+    return this.repository.findAllUnpublishedOutboxs(oneMinuteAgo);
   }
 }
