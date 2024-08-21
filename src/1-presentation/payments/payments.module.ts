@@ -21,7 +21,11 @@ import { PointEntity } from 'src/4-infrastructure/users/entities/point.entity';
 import { ConcertEntity } from 'src/4-infrastructure/concerts/entities/concert.entity';
 import { ConcertSeatEntity } from 'src/4-infrastructure/concerts/entities/concert-seat.entity';
 import { ConcertScheduleEntity } from 'src/4-infrastructure/concerts/entities/concert-schedule.entity';
-import { PaymentsListener } from './listener/payments.listener';
+import { ProducerService } from 'src/libs/message-broker/producer.service';
+import { PaymentsEvent } from 'src/events/payments/payments.event';
+import { ConsumerService } from 'src/libs/message-broker/consumer.service';
+import { PaymentsOutboxEvent } from 'src/events/payments/payments-outbox.event';
+import { PaymentsScheduler } from './scheduler/payments.scheduler';
 
 @Module({
   imports: [
@@ -39,7 +43,7 @@ import { PaymentsListener } from './listener/payments.listener';
   ],
   controllers: [PaymentsController],
   providers: [
-    PaymentsListener,
+    PaymentsScheduler,
     PaymentsFacade,
     PaymentsService,
     PaymentsRepository,
@@ -51,6 +55,10 @@ import { PaymentsListener } from './listener/payments.listener';
     UsersRepository,
     ConcertsService,
     ConcertsRepository,
+    ProducerService,
+    ConsumerService,
+    PaymentsEvent,
+    PaymentsOutboxEvent,
   ],
 })
 export class PaymentsModule {}

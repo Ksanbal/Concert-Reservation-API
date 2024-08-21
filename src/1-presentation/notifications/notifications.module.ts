@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
-import { NotificationsListener } from './listener/notifications.listener';
+import { NotificationsEvent } from 'src/events/notifications/notification.event';
+import { ConsumerService } from 'src/libs/message-broker/consumer.service';
 
 @Module({
-  providers: [NotificationsListener],
+  providers: [NotificationsEvent, ConsumerService],
 })
 export class NotificationsModule {}

@@ -14,6 +14,8 @@ import { MyRedisModule } from './libs/redis/redis.module';
 import { QueueGuardModule } from './libs/guards/queue/queue-guard.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { NotificationsModule } from './1-presentation/notifications/notifications.module';
+import { ProducerService } from './libs/message-broker/producer.service';
+import { ConsumerService } from './libs/message-broker/consumer.service';
 
 @Module({
   imports: [
@@ -34,7 +36,7 @@ import { NotificationsModule } from './1-presentation/notifications/notification
     NotificationsModule,
   ],
   controllers: [AppController],
-  providers: [AppService, Logger],
+  providers: [AppService, Logger, ProducerService, ConsumerService],
 })
 export class AppModule {
   public configure(consumer: MiddlewareConsumer): void {

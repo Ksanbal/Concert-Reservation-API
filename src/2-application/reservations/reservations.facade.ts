@@ -5,8 +5,11 @@ import { ReservationsFacadeCreateProps } from './reservations.facade-props';
 import { DataSource, EntityManager } from 'typeorm';
 import { QueueModel } from 'src/3-domain/queue/queue.model';
 import { log } from 'winston';
-import { PaymentsPaiedErrorEvent, PaymentsPaiedEvent } from 'src/events/event';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import {
+  PaymentsPaiedErrorEventDto,
+  PaymentsPaiedEvenDto,
+} from 'src/events/payments/dto/payments.event.dto';
+import { ProducerService } from 'src/libs/message-broker/producer.service';
 
 @Injectable()
 export class ReservationsFacade {
@@ -14,7 +17,7 @@ export class ReservationsFacade {
     private readonly concertsService: ConcertsService,
     private readonly reservationsService: ReservationsService,
     private readonly dataSource: DataSource,
-    private readonly eventEmitter: EventEmitter2,
+    private readonly producerServcie: ProducerService,
   ) {}
 
   /**
@@ -70,7 +73,7 @@ export class ReservationsFacade {
   /**
    * 예약 결제처리
    */
-  async payReservation(event: PaymentsPaiedEvent) {
+  async payReservation(event: PaymentsPaiedEvenDto) {
     const { reservation } = event;
 
     await this.dataSource
@@ -90,11 +93,22 @@ export class ReservationsFacade {
       .catch((error) => {
         log('error', '예약 결제처리 중 트랜잭션 오류', error);
 
-        // 결제 실패 이벤트 발행
-        this.eventEmitter.emitAsync(
-          PaymentsPaiedErrorEvent.EVENT_NAME,
-          new PaymentsPaiedErrorEvent(event.queue, event.payment, reservation),
-        );
+        // 결제 실패 이벤트 발행1
+        this.producerServcie.produce({
+          topic: PaymentsPaiedErrorEventDto.EVENT_NAME,
+          messages: [
+            {
+              key: event.payment.id.toString(),
+              value: JSON.stringify(
+                new PaymentsPaiedErrorEventDto(
+                  event.queue,
+                  event.payment,
+                  reservation,
+                ),
+              ),
+            },
+          ],
+        });
       });
   }
 }
