@@ -1,12 +1,16 @@
 import { ConflictException, Injectable } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PaymentsPayReqDto } from 'src/1-presentation/payments/dto/request/payments.pay.req.dto';
 import { PaymentsModel } from 'src/3-domain/payments/payments.model';
 import { PaymentsService } from 'src/3-domain/payments/payments.service';
 import { QueueModel } from 'src/3-domain/queue/queue.model';
 import { ReservationsService } from 'src/3-domain/reservations/reservations.service';
 import { UsersService } from 'src/3-domain/users/users.service';
-import { PaymentsPaiedErrorEvent, PaymentsPaiedEvent } from 'src/events/event';
+import {
+  PaymentsPaiedErrorEventDto,
+  PaymentsPaiedEvenDto,
+} from 'src/events/payments/dto/payments.event.dto';
+
+import { ProducerService } from 'src/libs/message-broker/producer.service';
 import { DataSource, EntityManager } from 'typeorm';
 import { log } from 'winston';
 
@@ -17,7 +21,7 @@ export class PaymentsFacade {
     private readonly usersService: UsersService,
     private readonly paymentsService: PaymentsService,
     private readonly dataSource: DataSource,
-    private readonly eventEmitter: EventEmitter2,
+    private readonly producerServcie: ProducerService,
   ) {}
 
   async payReservation(
@@ -46,6 +50,16 @@ export class PaymentsFacade {
           reservation.id,
           reservation.userId,
         );
+
+        // 결제 outbox 생성
+        await this.paymentsService.createOutbox(entityManager, {
+          payment,
+          topic: PaymentsPaiedEvenDto.EVENT_NAME,
+          key: payment.id.toString(),
+          value: JSON.stringify(
+            new PaymentsPaiedEvenDto(queue, payment, reservation),
+          ),
+        });
       })
       .catch((error) => {
         log('error', '결제 처리 중 트랜잭션 오류', error);
@@ -53,10 +67,17 @@ export class PaymentsFacade {
       });
 
     // 결제 완료 이벤트 발행
-    this.eventEmitter.emitAsync(
-      PaymentsPaiedEvent.EVENT_NAME,
-      new PaymentsPaiedEvent(queue, payment, reservation),
-    );
+    this.producerServcie.produce({
+      topic: PaymentsPaiedEvenDto.EVENT_NAME,
+      messages: [
+        {
+          key: payment.id.toString(),
+          value: JSON.stringify(
+            new PaymentsPaiedEvenDto(queue, payment, reservation),
+          ),
+        },
+      ],
+    });
 
     // 결제 정보 반환
     return payment;
@@ -65,7 +86,7 @@ export class PaymentsFacade {
   /**
    * 결제 실패시 결제 정보 롤백
    */
-  async rollbackPayment(event: PaymentsPaiedErrorEvent) {
+  async rollbackPayment(event: PaymentsPaiedErrorEventDto) {
     const { payment, reservation } = event;
 
     await this.dataSource
@@ -84,5 +105,24 @@ export class PaymentsFacade {
         log('error', '결제 롤백 중 트랜잭션 오류', error);
         throw new ConflictException(error);
       });
+  }
+
+  /**
+   * 발행 실패한 결제 outbox 재발행
+   */
+  async publishOutbox() {
+    // 미발행 outbox 조회
+    const outboxes = await this.paymentsService.getUnpublishedOutboxs();
+
+    if (0 < outboxes.length) {
+      // outbox 재발행
+      this.producerServcie.produce({
+        topic: outboxes[0].topic,
+        messages: outboxes.map((outbox) => ({
+          key: outbox.key,
+          value: outbox.value,
+        })),
+      });
+    }
   }
 }

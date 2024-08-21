@@ -11,20 +11,22 @@ import { UserEntity } from 'src/4-infrastructure/users/entities/user.entity';
 import { PointEntity } from 'src/4-infrastructure/users/entities/point.entity';
 import { QueueRedisRepository } from 'src/4-infrastructure/queue/queue-redis.repository';
 import { QueueScheduler } from './scheduler/queue.scheduler';
-import { QueueListener } from './listener/queue.listener';
+import { ConsumerService } from 'src/libs/message-broker/consumer.service';
+import { QueueEvent } from 'src/events/queue/queue.event';
 
 @Module({
   imports: [TypeOrmModule.forFeature([QueueEntity, UserEntity, PointEntity])],
   controllers: [QueueController],
   providers: [
     QueueScheduler,
-    QueueListener,
     QueueFacade,
     QueueService,
     QueueRepository,
     QueueRedisRepository,
     UsersService,
     UsersRepository,
+    ConsumerService,
+    QueueEvent,
   ],
 })
 export class QueueModule {}

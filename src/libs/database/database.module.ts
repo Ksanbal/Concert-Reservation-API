@@ -5,6 +5,7 @@ import { ConcertMetaDataEntity } from 'src/4-infrastructure/concerts/entities/co
 import { ConcertScheduleEntity } from 'src/4-infrastructure/concerts/entities/concert-schedule.entity';
 import { ConcertSeatEntity } from 'src/4-infrastructure/concerts/entities/concert-seat.entity';
 import { ConcertEntity } from 'src/4-infrastructure/concerts/entities/concert.entity';
+import { PaymentOutboxEntity } from 'src/4-infrastructure/payments/entities/payment-outbox.entity';
 import { PaymentEntity } from 'src/4-infrastructure/payments/entities/payment.entity';
 import { QueueEntity } from 'src/4-infrastructure/queue/entities/queue.entity';
 import { ReservationEntity } from 'src/4-infrastructure/reservations/entities/reservation.entity';
@@ -37,6 +38,7 @@ import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
           ConcertMetaDataEntity,
           ReservationEntity,
           PaymentEntity,
+          PaymentOutboxEntity,
         ],
         synchronize: configService.get('DB_SYNCHRONIZE') === 'true', // 환경 변수를 boolean으로 변환
       }),
