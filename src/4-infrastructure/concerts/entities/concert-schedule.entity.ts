@@ -1,6 +1,7 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('concert_schedule')
+@Index(['ticketOpenAt', 'ticketCloseAt'])
 export class ConcertScheduleEntity {
   @PrimaryGeneratedColumn()
   id: number;
