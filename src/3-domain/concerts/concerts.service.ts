@@ -34,40 +34,38 @@ export class ConcertsService {
   // 좌석 예약처리 요청
   async reserveSeat(seatId: number) {
     // 좌석 상태 조회 및 검증 후 업데이트
-    const seat = await this.dataSource
-      .createEntityManager()
-      .transaction(async (manager) => {
-        // 좌석 조회
-        const seat = await this.repository.findSeatByIdWithTransaction(
-          manager,
-          seatId,
+    await this.dataSource.createEntityManager().transaction(async (manager) => {
+      // 좌석 조회
+      const seat = await this.repository.findSeatByIdWithTransaction(
+        manager,
+        seatId,
+      );
+
+      if (seat.status !== ConcertSeatStatusEnum.OPEN) {
+        throw new BadRequestException(
+          '유효하지 않거나 이미 선택된 좌석입니다.',
         );
+      }
 
-        if (seat.status !== ConcertSeatStatusEnum.OPEN) {
-          throw new BadRequestException(
-            '유효하지 않거나 이미 선택된 좌석입니다.',
-          );
-        }
+      // 좌석 상태 업데이트
+      seat.status = ConcertSeatStatusEnum.RESERVED;
 
-        // 좌석 상태 업데이트
-        seat.status = ConcertSeatStatusEnum.RESERVED;
+      await this.repository.updateSeatStatus(manager, seat);
 
-        await this.repository.updateSeatStatus(manager, seat);
+      // 스케줄 예약 수 감소 업데이트
+      const schedule = await this.repository.findScheduleByIdWithTransaction(
+        manager,
+        seat.concertScheduleId,
+      );
 
-        return seat;
-      });
+      schedule.leftSeat -= 1;
 
-    // 스케줄 예약 수 감소 업데이트
-    const schedule = await this.repository.findScheduleById(
-      seat.concertScheduleId,
-    );
-
-    schedule.leftSeat -= 1;
-
-    await this.repository.updateScheduleLeftSeat(
-      schedule.id,
-      schedule.leftSeat,
-    );
+      await this.repository.updateScheduleLeftSeatWithTransaction(
+        manager,
+        schedule.id,
+        schedule.leftSeat,
+      );
+    });
   }
 
   // 공연 meta data 생성
