@@ -35,12 +35,18 @@ export class ConcertsRepository {
   ) {}
 
   async findAllWhereOpen(): Promise<ConcertsModel[]> {
-    const concerts = await this.concertRepository.find();
+    // const concerts = await this.concertRepository.find();
     const schedules = await this.concertScheduleRepository.find({
       where: {
-        concertId: In(concerts.map((concert) => concert.id)),
+        // concertId: In(concerts.map((concert) => concert.id)),
         ticketOpenAt: LessThanOrEqual(new Date()),
         ticketCloseAt: MoreThan(new Date()),
+      },
+    });
+    const concertIds = schedules.map((schedule) => schedule.concertId);
+    const concerts = await this.concertRepository.find({
+      where: {
+        id: In(concertIds),
       },
     });
 
@@ -58,6 +64,19 @@ export class ConcertsRepository {
       await this.concertScheduleRepository.findOneBy({
         id,
       }),
+    );
+  }
+
+  async findScheduleByIdWithTransaction(
+    manager: EntityManager,
+    id: number,
+  ): Promise<ConcertScheduleModel | null> {
+    return ConcertScheduleModel.fromEntity(
+      await manager
+        .createQueryBuilder(ConcertScheduleEntity, 'schedule')
+        .setLock('pessimistic_write')
+        .where('schedule.id = :id', { id })
+        .getOne(),
     );
   }
 
@@ -127,6 +146,19 @@ export class ConcertsRepository {
 
   async updateScheduleLeftSeat(scheduleId: number, leftSeat: number) {
     await this.concertScheduleRepository.update(scheduleId, {
+      leftSeat,
+    });
+  }
+
+  async updateScheduleLeftSeatWithTransaction(
+    manager: EntityManager,
+    scheduleId: number,
+    leftSeat: number,
+  ) {
+    // await this.concertScheduleRepository.update(scheduleId, {
+    //   leftSeat,
+    // });
+    await manager.update(ConcertScheduleEntity, scheduleId, {
       leftSeat,
     });
   }

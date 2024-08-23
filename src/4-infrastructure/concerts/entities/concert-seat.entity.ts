@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 
 export enum ConcertSeatStatusEnum {
   CLOSED = 'closed',
@@ -8,6 +8,7 @@ export enum ConcertSeatStatusEnum {
 }
 
 @Entity('concert_seat')
+@Index(['concertScheduleId'])
 export class ConcertSeatEntity {
   @PrimaryGeneratedColumn()
   id: number;

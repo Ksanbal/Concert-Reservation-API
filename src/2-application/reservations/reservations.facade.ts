@@ -10,6 +10,9 @@ import {
   PaymentsPaiedEvenDto,
 } from 'src/events/payments/dto/payments.event.dto';
 import { ProducerService } from 'src/libs/message-broker/producer.service';
+import Redlock from 'redlock';
+import { InjectRedis } from '@liaoliaots/nestjs-redis';
+import Redis from 'ioredis';
 
 @Injectable()
 export class ReservationsFacade {
@@ -18,14 +21,24 @@ export class ReservationsFacade {
     private readonly reservationsService: ReservationsService,
     private readonly dataSource: DataSource,
     private readonly producerServcie: ProducerService,
+    @InjectRedis()
+    private readonly redis: Redis,
   ) {}
 
   /**
    * 공연 좌석 예약
    */
   async create(queue: QueueModel, args: ReservationsFacadeCreateProps) {
+    const redlock = new Redlock([this.redis]);
+    const lock = await redlock.acquire(
+      [`reservations:${args.scheduleId}:${args.seatId}`],
+      2000,
+    );
+
     // 좌석 예약처리 요청
     await this.concertsService.reserveSeat(args.seatId);
+
+    await lock.release();
 
     // 공연 meta data 생성
     const concertMetaData = await this.concertsService.createMetaData(

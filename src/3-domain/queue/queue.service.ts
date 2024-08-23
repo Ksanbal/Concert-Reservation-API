@@ -11,18 +11,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import Redlock from 'redlock';
-import Redis from 'ioredis';
-import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import { QueueRedisRepository } from 'src/4-infrastructure/queue/queue-redis.repository';
 
 @Injectable()
 export class QueueService {
-  constructor(
-    @InjectRedis()
-    private readonly redis: Redis,
-    private readonly queueRedisRepository: QueueRedisRepository,
-  ) {}
+  constructor(private readonly queueRedisRepository: QueueRedisRepository) {}
 
   /**
    * Redis의 패턴을 이용해 queue 조회
@@ -49,8 +42,8 @@ export class QueueService {
   }
 
   async create(args: QueueServiceCreateProps): Promise<QueueModel> {
-    const redlock = new Redlock([this.redis]);
-    const lock = await redlock.acquire(['queue'], 2000);
+    // const redlock = new Redlock([this.redis]);
+    // const lock = await redlock.acquire(['queue'], 2000);
 
     let queue = await this.getQueueByPattern(`*:${args.userId}:*`);
 
@@ -68,7 +61,7 @@ export class QueueService {
         await this.queueRedisRepository.getRankByValueFromWaitingQueue(value);
     }
 
-    await lock.release();
+    // await lock.release();
 
     return queue;
   }
