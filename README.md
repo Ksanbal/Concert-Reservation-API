@@ -26,6 +26,7 @@
 - [Query 분석 및 캐싱 전략 설계](#query-분석-및-캐싱-전략-설계)
 - [수행되는 쿼리 수집과 인덱스를 통한 성능개선](#수행되는-쿼리-수집과-인덱스를-통한-성능개선)
 - [트랜잭션 범위의 이해와 MSA로 분리시 트랜잭션 처리의 한계와 해결방안](#트랜잭션-범위의-이해와-msa로-분리시-트랜잭션-처리의-한계와-해결방안)
+- [부하테스트 시나리오 및 개선사항](#부하테스트-시나리오-및-개선사항)
 
 ## 시퀀스 다이어그램
 
@@ -1051,3 +1052,50 @@ flowchart TD
 		1. 예약 상태를 예약으로 변경
 	- 대기열
 		1. 해당 토큰 복구
+
+# 부하테스트 시나리오 및 개선사항
+## 부하테스트 시나리오
+대기열 시스템이 있기 때문에 일련의 시나리오를 통한 부하테스트를 진행
+
+### 시나리오
+1. 대기열 진입 및 대기
+2. 공연 목록, 해당 공연의 좌석 목록 조회
+3. 좌석 예약 요청
+4. 결제를 위한 포인트 충전 요청
+5. 예약한 좌석에 대한 결제 요청
+
+### 설정환경
+- 초반 10초안으로 모든 유저 요청 시작
+- 5분간 유저수 유지
+- 5분 이후 점차적으로 활성 유저수 감소
+
+## 부하테스트 결과 (개선전(실선) / 개선후(점선))
+<img alt="image" src="https://github.com/user-attachments/assets/15fba89d-2de8-40ae-aca0-2f56e9ed9493">
+<img alt="image" src="https://github.com/user-attachments/assets/751a2b85-a65c-4bfb-97d0-35ce4c828568">
+<img alt="image" src="https://github.com/user-attachments/assets/afe64313-12b3-41ec-9275-7a5dfa3911b6">
+
+## 개선사항
+### 대기열
+- 이슈
+  - 대기열 토큰 발급시 분산락으로 인한 응답지연 이슈
+  - 분산락 획득 실패로 인한 에러 발생
+- `분산락 코드 삭제로 불필요한 지연 제거`
+- <img alt="image" src="https://github.com/user-attachments/assets/b2b66d6d-9100-4f20-817e-596ae27be4f2"><img alt="image" src="https://github.com/user-attachments/assets/45c8adc6-2e64-4e4a-adbb-b964b622e35f"> (좌측 개선전 / 우측 개선 후)
+- 오류 발생 삭제 및 응답 속도 개선
+  - 토큰 발급 (평균) : 2s -> 462ms (332%)
+  - 
+
+### 좌석 목록 조회
+- Index를 통한 쿼리 조회 개선
+- <img alt="image" src="https://github.com/user-attachments/assets/b2b66d6d-9100-4f20-817e-596ae27be4f2"><img alt="image" src="https://github.com/user-attachments/assets/198e95c4-076d-4617-a2e6-b2d2e7913f96"> (좌측 개선전 / 우측 개선 후)
+- 오류 발생 삭제
+- min, max 반환속도 개선
+
+### 예약 & 결제
+- 예약에 분산락을 추가하여 DB Lock 줄이기
+- <img alt="image" src="https://github.com/user-attachments/assets/b2b66d6d-9100-4f20-817e-596ae27be4f2"><img alt="image" src="https://github.com/user-attachments/assets/60f1386f-1bdd-408b-a1a9-451e7e36c35c">
+- 성공시 응답시간 개선
+  - 좌석 예약 (평균) : 3s -> 141ms (2000%)
+  - 좌석 결제 (평균) : 688ms -> 353ms (94%)
+
+
